@@ -6,10 +6,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   Activity,
-  BarChart3,
   BookOpen,
   Bot,
   ChevronLeft,

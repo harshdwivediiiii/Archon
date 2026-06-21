@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { User, Bell, Palette, Key, Shield } from "lucide-react";
+import { User, Bell, Key, Shield } from "lucide-react";
 
 export default function SettingsPage() {
   return (

@@ -1,28 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, GitBranch, Network, Sparkles, ExternalLink, ArrowRight, Cpu } from "lucide-react";
 
-const initialNodes = [
-  { id: "1", label: "API Gateway", type: "service", connections: ["2", "3"] },
-  { id: "2", label: "Auth Service", type: "service", connections: ["1", "4"] },
-  { id: "3", label: "User Service", type: "service", connections: ["1", "5"] },
-  { id: "4", label: "PostgreSQL", type: "database", connections: ["2"] },
-  { id: "5", label: "Redis Cache", type: "database", connections: ["3"] },
-  { id: "6", label: "Docker", type: "infra", connections: ["2", "3"] },
-];
+import { Search, GitBranch, Network, ExternalLink, ArrowRight, Cpu, Loader2 } from "lucide-react";
+
+interface KnowledgeNode {
+  id: string;
+  label: string;
+  type: string;
+  description: string | null;
+  connections: string[];
+}
+
+interface KnowledgeEdge {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  label: string | null;
+  type: string;
+}
 
 export default function KnowledgeGraphPage() {
-  const [selectedNode, setSelectedNode] = useState<typeof initialNodes[0] | null>(null);
+  const [nodes, setNodes] = useState<KnowledgeNode[]>([]);
+  const [edges, setEdges] = useState<KnowledgeEdge[]>([]);
+  const [selectedNode, setSelectedNode] = useState<KnowledgeNode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const filteredNodes = initialNodes.filter((n) =>
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const wsRes = await fetch("/api/workspace");
+        if (cancelled) return;
+        const wsData = await wsRes.json();
+        const workspaceId = wsData?.id;
+
+        if (workspaceId) {
+          const graphRes = await fetch(`/api/graph?workspaceId=${workspaceId}`);
+          if (!cancelled && graphRes.ok) {
+            const graphData = await graphRes.json();
+            if (graphData.nodes) setNodes(graphData.nodes);
+            if (graphData.edges) setEdges(graphData.edges);
+          }
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const filteredNodes = nodes.filter((n) =>
     n.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -39,17 +79,107 @@ export default function KnowledgeGraphPage() {
         <div className="grid flex-1 gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardContent className="h-full p-6">
-              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-800/30">
-                <div className="text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600/10">
-                    <GitBranch className="h-8 w-8 text-blue-400" />
-                  </div>
-                  <p className="text-sm text-zinc-400">Interactive graph visualization</p>
-                  <p className="mt-1 text-xs text-zinc-600">
-                    Click a node to inspect details
-                  </p>
+              {loading ? (
+                <div className="flex h-full items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
                 </div>
-              </div>
+              ) : nodes.length === 0 ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600/10">
+                      <GitBranch className="h-8 w-8 text-blue-400" />
+                    </div>
+                    <p className="text-sm text-zinc-400">No knowledge graph data yet</p>
+                    <p className="mt-1 text-xs text-zinc-600">
+                      Import a repository to generate a knowledge graph
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-full flex-col">
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {filteredNodes.map((node) => (
+                      <Badge
+                        key={node.id}
+                        variant={selectedNode?.id === node.id ? "default" : "secondary"}
+                        className={`cursor-pointer gap-1.5 px-3 py-1.5 ${
+                          node.type === "service"
+                            ? "border-blue-600/30"
+                            : node.type === "database"
+                              ? "border-purple-600/30"
+                              : "border-emerald-600/30"
+                        }`}
+                        onClick={() => setSelectedNode(node)}
+                      >
+                        <Network className="h-3 w-3" />
+                        {node.label}
+                        <span className="ml-1 text-xs opacity-60">({node.connections.length})</span>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex-1 rounded-xl border border-dashed border-zinc-700 bg-zinc-800/30">
+                    <svg className="h-full w-full" viewBox="0 0 800 500">
+                      {edges.map((edge) => {
+                        const source = nodes.find((n) => n.id === edge.sourceId);
+                        const target = nodes.find((n) => n.id === edge.targetId);
+                        if (!source || !target) return null;
+                        const sx = 400 + Math.sin(nodes.indexOf(source) * 1.5) * 200;
+                        const sy = 250 + Math.cos(nodes.indexOf(source) * 1.5) * 150;
+                        const tx = 400 + Math.sin(nodes.indexOf(target) * 1.5) * 200;
+                        const ty = 250 + Math.cos(nodes.indexOf(target) * 1.5) * 150;
+                        return (
+                          <line
+                            key={edge.id}
+                            x1={sx}
+                            y1={sy}
+                            x2={tx}
+                            y2={ty}
+                            stroke="#27272a"
+                            strokeWidth={1.5}
+                          />
+                        );
+                      })}
+                      {filteredNodes.map((node, i) => {
+                        const cx = 400 + Math.sin(i * 1.5) * 200;
+                        const cy = 250 + Math.cos(i * 1.5) * 150;
+                        return (
+                          <g
+                            key={node.id}
+                            onClick={() => setSelectedNode(node)}
+                            className="cursor-pointer"
+                          >
+                            <circle
+                              cx={cx}
+                              cy={cy}
+                              r={24}
+                              fill={
+                                selectedNode?.id === node.id ? "#3b82f6" :
+                                node.type === "service" ? "#1e3a5f" :
+                                node.type === "database" ? "#3b0764" : "#064e3b"
+                              }
+                              stroke={
+                                selectedNode?.id === node.id ? "#60a5fa" :
+                                node.type === "service" ? "#3b82f6" :
+                                node.type === "database" ? "#a855f7" : "#34d399"
+                              }
+                              strokeWidth={2}
+                            />
+                            <text
+                              x={cx}
+                              y={cy + 40}
+                              textAnchor="middle"
+                              fill="#a1a1aa"
+                              fontSize={11}
+                            >
+                              {node.label.length > 15 ? node.label.slice(0, 14) + "..." : node.label}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -69,6 +199,9 @@ export default function KnowledgeGraphPage() {
             <CardContent className="flex-1">
               <ScrollArea className="h-[400px] pr-4">
                 <div className="space-y-2">
+                  {filteredNodes.length === 0 && !loading && (
+                    <p className="text-sm text-zinc-500">No nodes found</p>
+                  )}
                   {filteredNodes.map((node) => (
                     <button
                       key={node.id}
@@ -126,6 +259,9 @@ export default function KnowledgeGraphPage() {
                   <div>
                     <h3 className="text-lg font-semibold text-white">{selectedNode.label}</h3>
                     <p className="text-sm capitalize text-zinc-400">{selectedNode.type}</p>
+                    {selectedNode.description && (
+                      <p className="mt-1 text-xs text-zinc-500">{selectedNode.description}</p>
+                    )}
                   </div>
                 </div>
                 <Button variant="outline" size="sm">
@@ -137,7 +273,7 @@ export default function KnowledgeGraphPage() {
                 <h4 className="mb-3 text-sm font-medium text-zinc-400">Connected Nodes</h4>
                 <div className="flex flex-wrap gap-2">
                   {selectedNode.connections.map((connId) => {
-                    const conn = initialNodes.find((n) => n.id === connId);
+                    const conn = nodes.find((n) => n.id === connId);
                     return conn ? (
                       <Badge
                         key={conn.id}
@@ -150,6 +286,9 @@ export default function KnowledgeGraphPage() {
                       </Badge>
                     ) : null;
                   })}
+                  {selectedNode.connections.length === 0 && (
+                    <p className="text-sm text-zinc-500">No direct connections</p>
+                  )}
                 </div>
               </div>
             </CardContent>

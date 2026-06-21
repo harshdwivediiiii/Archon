@@ -1,9 +1,9 @@
 "use client";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { History, GitBranch, Plus, ArrowRight, Server, Database, Globe } from "lucide-react";
+import { Plus, ArrowRight } from "lucide-react";
 
 const timelineEvents = [
   { date: "2026-06-21", events: [

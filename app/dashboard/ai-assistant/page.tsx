@@ -9,7 +9,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Bot,
-  Cpu,
   Send,
   Sparkles,
   User,
@@ -74,7 +73,20 @@ export default function AIAssistantPage() {
         body: JSON.stringify({ message: input }),
       });
 
-      if (!response.ok) throw new Error("Failed to get response");
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        const errorMsg = errorBody?.error || "Failed to get response";
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 2).toString(),
+            role: "assistant",
+            content: errorMsg,
+          },
+        ]);
+        setIsStreaming(false);
+        return;
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -97,13 +109,13 @@ export default function AIAssistantPage() {
           });
         }
       }
-    } catch (error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 2).toString(),
           role: "assistant",
-          content: "Sorry, I encountered an error. Please make sure your OpenAI API key is configured.",
+          content: "Sorry, I encountered a network error. Please check your connection and try again.",
         },
       ]);
     } finally {

@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Check, Sparkles, ArrowRight, Zap, Users, Building2 } from "lucide-react";
+import { CreditCard, Check, Sparkles, Zap, Users, Building2 } from "lucide-react";
 
 const plans = [
   {
