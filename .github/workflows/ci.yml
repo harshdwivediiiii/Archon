@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: archon
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archon
+      DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archon
+      AUTH_SECRET: ci-test-secret-with-at-least-32-characters
+      AUTH_GITHUB_ID: ci-github-client-id
+      AUTH_GITHUB_SECRET: ci-github-client-secret
+      AUTH_GOOGLE_ID: ci-google-client-id
+      AUTH_GOOGLE_SECRET: ci-google-client-secret
+      OPENAI_API_KEY: sk-ci-test-key
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ""
+      RESEND_API_KEY: ""
+      NEXT_PUBLIC_POSTHOG_KEY: ""
+      NEXT_PUBLIC_POSTHOG_HOST: https://app.posthog.com
+      SENTRY_DSN: ""
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      - run: npx prisma migrate deploy
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm run build

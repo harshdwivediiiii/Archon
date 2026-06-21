@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum Plan {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
+
+enum RepositoryProvider {
+  GITHUB
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(MEMBER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+
+  workspaceMemberships WorkspaceMember[]
+  documents           Document[]
+  chats               Chat[]
+  messages            Message[]
+  subscriptions       Subscription[]
+  usageRecords        UsageRecord[]
+  invitationsSent     Invitation[]  @relation("SentInvitations")
+  ownedWorkspaces     Workspace[]   @relation("WorkspaceOwner")
+
+  @@map("users")
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId String
+  owner   User   @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+
+  members  WorkspaceMember[]
+  projects Project[]
+  chats    Chat[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  role        Role     @default(MEMBER)
+  joinedAt    DateTime @default(now())
+  workspaceId String
+  userId      String
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  repositories Repository[]
+  documents    Document[]
+  diagrams     Diagram[]
+
+  @@map("projects")
+}
+
+model Repository {
+  id          String   @id @default(cuid())
+  name        String
+  fullName    String
+  description String?
+  url         String
+  provider    RepositoryProvider @default(GITHUB)
+  defaultBranch String  @default("main")
+  isPrivate   Boolean  @default(false)
+  lastSyncedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  documents Document[]
+
+  @@unique([projectId, fullName])
+  @@map("repositories")
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  title       String
+  content     String?  @db.Text
+  sourceType  String   @default("manual")
+  sourceUrl   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id])
+  repositoryId String?
+  repository  Repository? @relation(fields: [repositoryId], references: [id])
+
+  diagrams Diagram[]
+
+  @@map("documents")
+}
+
+model Diagram {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("architecture")
+  nodes     Json
+  edges     Json
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id])
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id])
+
+  @@map("diagrams")
+}
+
+model KnowledgeNode {
+  id        String   @id @default(cuid())
+  label     String
+  type      String   @default("concept")
+  description String?
+  metadata  Json?
+  x         Float?
+  y         Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  sourcesFrom KnowledgeEdge[] @relation("Source")
+  targetsTo   KnowledgeEdge[] @relation("Target")
+
+  @@map("knowledge_nodes")
+}
+
+model KnowledgeEdge {
+  id        String   @id @default(cuid())
+  label     String?
+  type      String   @default("related")
+  createdAt DateTime @default(now())
+
+  sourceId String
+  targetId String
+
+  source KnowledgeNode @relation("Source", fields: [sourceId], references: [id], onDelete: Cascade)
+  target KnowledgeNode @relation("Target", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@map("knowledge_edges")
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  title     String   @default("New Chat")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+
+  messages Message[]
+
+  @@map("chats")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  role      String
+  content   String   @db.Text
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  chatId String
+  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  userId  String?
+  user    User?  @relation(fields: [userId], references: [id])
+
+  @@map("messages")
+}
+
+model Subscription {
+  id              String   @id @default(cuid())
+  plan            Plan     @default(FREE)
+  status          String   @default("active")
+  stripeCustomerId String? @unique
+  stripeSubscriptionId String? @unique
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model UsageRecord {
+  id        String   @id @default(cuid())
+  feature   String
+  quantity  Int      @default(1)
+  recordedAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("usage_records")
+}
+
+model Invitation {
+  id        String   @id @default(cuid())
+  email     String
+  role      Role     @default(MEMBER)
+  token     String   @unique
+  acceptedAt DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  workspaceId String
+  inviterId   String
+  inviter     User @relation("SentInvitations", fields: [inviterId], references: [id])
+
+  @@map("invitations")
+}
