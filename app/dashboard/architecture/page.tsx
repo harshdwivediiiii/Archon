@@ -21,7 +21,8 @@ import {
   Lightbulb, Network, Layers, BarChart3, FileText, Sparkles, History, Database,
   Package, Globe, Box, Code2, ExternalLink, Eye, ZoomIn, ZoomOut, Maximize, Minimize,
   Expand, Shrink, Info, SlidersHorizontal, ChevronDown, ChevronRight, GitFork,
-  Activity, Shield, Gauge, Bot,
+  Activity, Shield, Gauge, Bot, Clock, Camera, Download, Upload, GitBranch,
+  Tag, Bookmark, Lock, Key, UserCheck, ArrowLeftRight, Route, FileSearch,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -35,14 +36,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { getTechIcon } from "@/lib/analysis/tech-icons";
 import type {
   DetectedService, DetectedApi, DetectedDatabase, DetectedInfrastructure, DetectedModule,
-  DetectedEvent, AiAnalysisData,
+  DetectedEvent, AiAnalysisData, ArchitectureSnapshot, SecurityFinding,
 } from "@/components/architecture/types";
 import { ThreeBackground } from "./components/three-background";
 import { computeDagreLayout, computeLayerLayout } from "./utils/layout-engine";
 import {
   DIAGRAM_MODES, transformSystemView, transformUmlView, transformInfrastructureView,
-  transformDataFlowView, transformDependencyView, LAYER_ORDER, type DiagramMode,
-  type ModeNode, type ModeEdge,
+  transformDataFlowView, transformDependencyView, transformSecurityView, transformTimelineView,
+  LAYER_ORDER, NODE_COLORS, type DiagramMode, type ModeNode, type ModeEdge,
 } from "./utils/mode-transformers";
 
 interface ImportedRepo {
@@ -52,6 +53,11 @@ interface ImportedRepo {
 interface AnalysisProgress {
   analysisId: string; stage: string; progress: number; status: string; error?: string;
 }
+
+const MODE_ICONS: Record<string, React.ElementType> = {
+  system: Network, uml: Code2, infrastructure: Box, dataflow: GitFork, dependencies: Package,
+  security: Shield, timeline: History,
+};
 
 const STAGE_LABELS: Record<string, string> = {
   pending: "Waiting to start...", cloning: "Cloning repository...", analyzing: "Analyzing source code...",
@@ -66,20 +72,21 @@ const LIVE_STEPS = [
   { key: "docs", label: "Documentation Generated" },
 ];
 
-const NODE_COLORS: Record<string, string> = {
-  frontend: "#3b82f6", backend: "#10b981", database: "#f59e0b", infrastructure: "#8b5cf6",
-  service: "#06b6d4", library: "#6b7280", queue: "#ef4444", api: "#ec4899",
-  uml_class: "#a855f7", uml_interface: "#06b6d4",
-};
-
 const STATUS_COLORS: Record<string, string> = {
   healthy: "#22c55e", warning: "#f59e0b", error: "#ef4444", unknown: "#6b7280",
 };
 
+const SEVERITY_COLORS: Record<string, string> = {
+  CRITICAL: "#ef4444", HIGH: "#f59e0b", MEDIUM: "#3b82f6", LOW: "#6b7280", INFO: "#8b90a0",
+};
+
 function computeStatus(data: ModeNode["data"]): { status: "healthy" | "warning" | "error" | "unknown"; label: string } {
+  if (data.risk === "circular dependency") return { status: "error", label: "circular" };
+  if (data.severity === "HIGH" || data.severity === "CRITICAL") return { status: "error", label: "critical" };
   if (data.dependencyCount > 20) return { status: "warning", label: "complex" };
+  if (data.health?.score !== undefined && data.health.score < 50) return { status: "error", label: "unhealthy" };
   if (data.dependencyCount === 0 && data.nodeType !== "frontend" && data.nodeType !== "library") return { status: "warning", label: "isolated" };
-  return { status: "unknown", label: "stable" };
+  return { status: "healthy", label: "stable" };
 }
 
 function TechIconDisplay({ technology, nodeType, size = 18 }: { technology?: string; nodeType: string; size?: number }) {
@@ -96,14 +103,19 @@ function EnhancedNode({ data, selected }: { data: ModeNode["data"]; selected?: b
   const color = NODE_COLORS[data.nodeType] || "#6b7280";
   const { status, label: statusLabel } = computeStatus(data);
   const metrics = data.metrics || [];
+  const isSecurity = data.nodeType === "security" || data.severity;
+  const isTimeline = data.nodeType === "timeline_node";
   return (
     <div
       className={`rounded-xl px-4 py-3 shadow-lg backdrop-blur-md transition-all min-w-[210px] ${
         selected ? "ring-2 ring-[#0070f3] ring-offset-2 ring-offset-[#10131b]" : ""
-      }`}
+      } ${isSecurity ? "border-l-4" : ""}`}
       style={{
-        background: "rgba(16, 19, 27, 0.92)",
-        border: `1.5px solid ${color}${selected ? "cc" : "40"}`,
+        background: isSecurity && data.severity === "CRITICAL" ? "rgba(239, 68, 68, 0.08)" :
+                     isSecurity && data.severity === "HIGH" ? "rgba(245, 158, 11, 0.08)" :
+                     "rgba(16, 19, 27, 0.92)",
+        border: `1.5px solid ${isSecurity && data.severity ? SEVERITY_COLORS[data.severity] || color : color}${selected ? "cc" : "40"}`,
+        borderLeftColor: isSecurity && data.severity ? SEVERITY_COLORS[data.severity] || color : undefined,
       }}
     >
       <div className="flex items-center gap-3">
@@ -128,7 +140,7 @@ function EnhancedNode({ data, selected }: { data: ModeNode["data"]; selected?: b
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <Badge variant="outline" className="border-[#414754] text-[10px] text-[#8b90a0] px-1.5 py-0 flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[status] }} />
-          {data.nodeType}
+          {data.severity || data.nodeType}
         </Badge>
         {data.dependencyCount > 0 && (
           <Badge variant="outline" className="border-[#414754]/50 text-[10px] text-[#06b6d4]">
@@ -143,6 +155,11 @@ function EnhancedNode({ data, selected }: { data: ModeNode["data"]; selected?: b
         {data.databases && data.databases.length > 0 && (
           <Badge variant="outline" className="border-[#f59e0b]/30 text-[10px] text-[#f59e0b]">
             {data.databases.length} db
+          </Badge>
+        )}
+        {data.risk && (
+          <Badge variant="outline" className="border-[#ef4444]/30 text-[10px] text-[#ef4444]">
+            {data.risk}
           </Badge>
         )}
         {data.port && (
@@ -174,6 +191,9 @@ interface InspectorData {
   methods?: { name: string; params: string; returnType: string; visibility: string }[];
   properties?: { name: string; type: string; visibility: string }[];
   extends?: string; implements?: string[]; serviceData?: DetectedService;
+  severity?: string; risk?: string; recommendation?: string; category?: string;
+  eventType?: string; timestamp?: string; group?: string; environment?: string;
+  version?: string; confidence?: number;
 }
 
 function InfoChip({ label, value, color }: { label: string; value: string; color: string }) {
@@ -227,13 +247,28 @@ function DeepInspectorPanel({
               <InfoChip label="Type" value={data.type} color={color} />
               <InfoChip label="Layer" value={data.layer} color={color} />
               {data.port && <InfoChip label="Port" value={`:${data.port}`} color={color} />}
-              <InfoChip label="Confidence" value={data.health?.score ? `${data.health.score}%` : "N/A"} color={color} />
+              {data.severity && <InfoChip label="Severity" value={data.severity} color={SEVERITY_COLORS[data.severity] || color} />}
+              {data.confidence !== undefined && <InfoChip label="Confidence" value={`${data.confidence}%`} color={color} />}
+              {data.health?.score !== undefined && <InfoChip label="Health" value={`${data.health.score}%`} color={color} />}
             </div>
 
             {data.description && (
               <div>
                 <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1">Description</p>
                 <p className="text-xs text-[#c1c6d7] leading-relaxed">{data.description}</p>
+              </div>
+            )}
+
+            {data.risk && (
+              <div className="rounded-lg border border-[#ef4444]/30 bg-[#ef4444]/5 p-3">
+                <p className="text-[10px] text-[#ef4444] uppercase tracking-wider font-semibold mb-1">Risk</p>
+                <p className="text-xs text-[#c1c6d7]">{data.risk}</p>
+                {data.recommendation && (
+                  <div className="mt-2 flex items-start gap-1.5 text-[11px] text-[#10b981]">
+                    <Lightbulb className="w-3 h-3 mt-0.5 shrink-0" />
+                    <span>{data.recommendation}</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -256,50 +291,19 @@ function DeepInspectorPanel({
               </div>
             )}
 
+            {data.timestamp && (
+              <div>
+                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1">Timestamp</p>
+                <p className="text-xs font-mono text-[#c1c6d7]">{new Date(data.timestamp).toLocaleString()}</p>
+              </div>
+            )}
+
             {data.dependencies && data.dependencies.length > 0 && (
               <div>
                 <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Dependencies ({data.dependencies.length})</p>
                 <div className="flex flex-wrap gap-1">
                   {data.dependencies.map((d) => (
                     <Badge key={d} variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7]">{d}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {data.dependents && data.dependents.length > 0 && (
-              <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Dependents ({data.dependents.length})</p>
-                <div className="flex flex-wrap gap-1">
-                  {data.dependents.map((d) => (
-                    <Badge key={d} variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7]">{d}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {data.endpoints && data.endpoints.length > 0 && (
-              <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Endpoints ({data.endpoints.length})</p>
-                <div className="space-y-1">
-                  {data.endpoints.slice(0, 6).map((ep) => (
-                    <div key={ep} className="flex items-center gap-1.5 text-[11px] font-mono text-[#c1c6d7] bg-[#1c1f27] rounded px-2 py-1 border border-[#414754]/50">
-                      <Globe className="w-3 h-3 text-[#06b6d4]" />
-                      {ep}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {data.databases && data.databases.length > 0 && (
-              <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Databases</p>
-                <div className="flex flex-wrap gap-1">
-                  {data.databases.map((db) => (
-                    <Badge key={db} variant="outline" className="border-[#f59e0b]/30 text-[10px] text-[#f59e0b]">
-                      <Database className="w-3 h-3 mr-1" />{db}
-                    </Badge>
                   ))}
                 </div>
               </div>
@@ -316,23 +320,15 @@ function DeepInspectorPanel({
               </div>
             )}
 
-            {data.functions && data.functions.length > 0 && (
+            {data.endpoints && data.endpoints.length > 0 && (
               <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Functions ({data.functions.length})</p>
-                <div className="flex flex-wrap gap-1">
-                  {data.functions.slice(0, 8).map((fn) => (
-                    <Badge key={fn} variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7]">{fn}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {data.classes && data.classes.length > 0 && (
-              <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Classes ({data.classes.length})</p>
-                <div className="flex flex-wrap gap-1">
-                  {data.classes.slice(0, 8).map((cls) => (
-                    <Badge key={cls} variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7]">{cls}</Badge>
+                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Endpoints ({data.endpoints.length})</p>
+                <div className="space-y-1">
+                  {data.endpoints.slice(0, 8).map((ep) => (
+                    <div key={ep} className="flex items-center gap-1.5 text-[11px] font-mono text-[#c1c6d7] bg-[#1c1f27] rounded px-2 py-1 border border-[#414754]/50">
+                      <Globe className="w-3 h-3 text-[#06b6d4]" />
+                      {ep}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -350,28 +346,6 @@ function DeepInspectorPanel({
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {data.properties && data.properties.length > 0 && (
-              <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Properties ({data.properties.length})</p>
-                <div className="flex flex-wrap gap-1">
-                  {data.properties.slice(0, 8).map((p) => (
-                    <Badge key={p.name} variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7]">
-                      {p.visibility === "private" ? "- " : "+ "}{p.name}: {p.type}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {data.deploymentConfig && (
-              <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1">Deployment</p>
-                <pre className="text-[10px] font-mono text-[#c1c6d7] bg-[#1c1f27] rounded p-2 border border-[#414754] whitespace-pre-wrap max-h-24 overflow-y-auto">
-                  {data.deploymentConfig}
-                </pre>
               </div>
             )}
 
@@ -407,15 +381,6 @@ function DeepInspectorPanel({
                 </div>
               </div>
             )}
-            <div className="rounded-lg border border-[#414754] p-3">
-              <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-2">Node Metadata</p>
-              <div className="space-y-1.5 text-[11px]">
-                <div className="flex justify-between"><span className="text-[#8b90a0]">ID</span><span className="text-[#e0e2ed] font-mono">{data.id.slice(0, 20)}..</span></div>
-                <div className="flex justify-between"><span className="text-[#8b90a0]">Dependency Count</span><span className="text-[#e0e2ed]">{data.dependencies?.length || 0}</span></div>
-                <div className="flex justify-between"><span className="text-[#8b90a0]">Dependents</span><span className="text-[#e0e2ed]">{data.dependents?.length || 0}</span></div>
-                <div className="flex justify-between"><span className="text-[#8b90a0]">Health Score</span><span className="text-[#e0e2ed]">{data.health?.score ?? "N/A"}</span></div>
-              </div>
-            </div>
           </div>
         )}
       </ScrollArea>
@@ -445,10 +410,6 @@ function ContextMenu({ x, y, nodeId, label, onClose, onInspect, onViewInKnowledg
   );
 }
 
-const MODE_ICONS: Record<string, React.ElementType> = {
-  system: Network, uml: Code2, infrastructure: Box, dataflow: GitFork, dependencies: Package,
-};
-
 export default function ArchitecturePage() {
   const [repos, setRepos] = useState<ImportedRepo[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState<string>("");
@@ -468,6 +429,10 @@ export default function ArchitecturePage() {
   const [graphStats, setGraphStats] = useState<{ totalNodes: number; uniqueNodes: number; nodeDuplicatesRemoved: number; totalEdges: number; uniqueEdges: number; edgeDuplicatesRemoved: number } | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [snapshotOpen, setSnapshotOpen] = useState(false);
+  const [snapshots, setSnapshots] = useState<ArchitectureSnapshot[]>([]);
+  const [securityOpen, setSecurityOpen] = useState(false);
+  const [securityData, setSecurityData] = useState<{ findings: SecurityFinding[]; severityCounts: Record<string, number>; totalCount: number } | null>(null);
 
   const [analysisExists, setAnalysisExists] = useState(false);
   const [analysisData, setAnalysisData] = useState<Record<string, unknown> | null>(null);
@@ -479,6 +444,17 @@ export default function ArchitecturePage() {
   const rfInstance = useRef<any>(null);
   const fitView = useCallback((opts?: { padding?: number; duration?: number; nodes?: { id: string }[] }) =>
     rfInstance.current?.fitView(opts), []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "f" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); fitView({ padding: 0.3 }); }
+      if (e.key === "Escape") { setInspectorData(null); setContextMenu(null); }
+      if (e.key === "Fullscreen" || (e.key === "f" && e.shiftKey)) { setFullscreen((f) => !f); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [fitView]);
 
   useEffect(() => {
     (async () => {
@@ -497,6 +473,7 @@ export default function ArchitecturePage() {
     })();
   }, []);
 
+  // Fetch analysis results
   useEffect(() => {
     if (!selectedRepoId) return;
     let cancelled = false;
@@ -517,6 +494,28 @@ export default function ArchitecturePage() {
     })();
     return () => { cancelled = true; };
   }, [selectedRepoId]);
+
+  // Fetch snapshots
+  useEffect(() => {
+    if (!selectedRepoId || !analysisExists) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/architecture/snapshots/${selectedRepoId}`);
+        if (res.ok) setSnapshots(await res.json());
+      } catch { /* ignore */ }
+    })();
+  }, [selectedRepoId, analysisExists]);
+
+  // Fetch security data
+  useEffect(() => {
+    if (!selectedRepoId || !analysisExists || activeMode !== "security") return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/security/${selectedRepoId}`);
+        if (res.ok) setSecurityData(await res.json());
+      } catch { /* ignore */ }
+    })();
+  }, [selectedRepoId, analysisExists, activeMode]);
 
   const dedupNodes = useCallback((items: ModeNode[]): { nodes: ModeNode[]; removed: number } => {
     const seen = new Map<string, ModeNode>();
@@ -549,19 +548,25 @@ export default function ArchitecturePage() {
   }, []);
 
   // Build mode-specific graph from analysis data
-  useEffect(() => {
-    if (!analysisData) return;
+  const graphResult = useMemo(() => {
+    if (!analysisData) return { laidOut: [] as ModeNode[], dedupedEdges: [] as ModeEdge[], graphStats: null as { totalNodes: number; uniqueNodes: number; nodeDuplicatesRemoved: number; totalEdges: number; uniqueEdges: number; edgeDuplicatesRemoved: number } | null };
     const analysis = (analysisData?.analysis as Record<string, unknown>) || null;
-    if (!analysis) return;
+    if (!analysis) return { laidOut: [] as ModeNode[], dedupedEdges: [] as ModeEdge[], graphStats: null as { totalNodes: number; uniqueNodes: number; nodeDuplicatesRemoved: number; totalEdges: number; uniqueEdges: number; edgeDuplicatesRemoved: number } | null };
     const services = (analysis?.services as DetectedService[]) || [];
     const apis = (analysis?.apis as DetectedApi[]) || [];
     const databases = (analysis?.databases as DetectedDatabase[]) || [];
     const modules = (analysis?.modules as DetectedModule[]) || [];
     const infra = (analysis?.infra as DetectedInfrastructure[]) || [];
     const events = (analysis?.events as DetectedEvent[]) || [];
+    const files = (analysis?.files as Array<{ path: string; language: string }>) || [];
 
     let modeNodes: ModeNode[] = [];
     let modeEdges: ModeEdge[] = [];
+
+    const allEnvVars = new Set<string>();
+    for (const svc of services) {
+      for (const ev of svc.envVars || []) allEnvVars.add(ev);
+    }
 
     switch (activeMode) {
       case "system":
@@ -579,6 +584,12 @@ export default function ArchitecturePage() {
       case "dependencies":
         ({ nodes: modeNodes, edges: modeEdges } = transformDependencyView(services, modules, events));
         break;
+      case "security":
+        ({ nodes: modeNodes, edges: modeEdges } = transformSecurityView(Array.from(allEnvVars), services, files));
+        break;
+      case "timeline":
+        ({ nodes: modeNodes, edges: modeEdges } = transformTimelineView(analysis, services, modules, files));
+        break;
     }
 
     const { nodes: dedupedNodes, removed: nodeRemoved } = dedupNodes(modeNodes);
@@ -591,14 +602,28 @@ export default function ArchitecturePage() {
       laidOut = computeDagreLayout(dedupedNodes, dedupedEdges, activeMode === "uml" ? "TB" : "LR");
     }
 
-    setGraphStats({
-      totalNodes: modeNodes.length, uniqueNodes: dedupedNodes.length, nodeDuplicatesRemoved: nodeRemoved,
-      totalEdges: modeEdges.length, uniqueEdges: dedupedEdges.length, edgeDuplicatesRemoved: edgeRemoved,
-    });
-    setNodes(laidOut);
-    setEdges(dedupedEdges);
-    setTimeout(() => fitView({ padding: 0.3, duration: 300 }), 100);
-  }, [analysisData, activeMode, setNodes, setEdges, fitView, dedupNodes, dedupEdges]);
+    return {
+      laidOut,
+      dedupedEdges,
+      graphStats: {
+        totalNodes: modeNodes.length, uniqueNodes: dedupedNodes.length, nodeDuplicatesRemoved: nodeRemoved,
+        totalEdges: modeEdges.length, uniqueEdges: dedupedEdges.length, edgeDuplicatesRemoved: edgeRemoved,
+      },
+    };
+  }, [analysisData, activeMode, dedupNodes, dedupEdges]);
+
+  useEffect(() => {
+    if (!graphResult.laidOut.length) return;
+    const timer = setTimeout(() => {
+      setNodes(graphResult.laidOut);
+      setEdges(graphResult.dedupedEdges);
+      if (graphResult.graphStats) setGraphStats(graphResult.graphStats);
+      fitView({ padding: 0.3, duration: 300 });
+    }, 100);
+    return () => clearTimeout(timer);
+
+    // Syncing React Flow state is required when analysis result changes
+  }, [graphResult, setNodes, setEdges, setGraphStats, fitView]);
 
   const handleSync = useCallback(async () => {
     if (!selectedRepoId) return;
@@ -642,6 +667,32 @@ export default function ArchitecturePage() {
     es.onerror = () => { es.close(); setSyncing(false); };
   }, [selectedRepoId]);
 
+  const saveSnapshot = useCallback(async () => {
+    if (!selectedRepoId || !analysisExists) return;
+    try {
+      await fetch(`/api/architecture/snapshots/${selectedRepoId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${activeMode} snapshot ${new Date().toLocaleString()}`,
+          mode: activeMode,
+          nodes,
+          edges,
+          metadata: { layout: activeMode === "system" ? "layer" : "dagre" },
+        }),
+      });
+      const res = await fetch(`/api/architecture/snapshots/${selectedRepoId}`);
+      if (res.ok) setSnapshots(await res.json());
+    } catch { /* ignore */ }
+  }, [selectedRepoId, analysisExists, activeMode, nodes, edges]);
+
+  const loadSnapshot = useCallback((snapshot: ArchitectureSnapshot) => {
+    setNodes(snapshot.nodes as ModeNode[]);
+    setEdges(snapshot.edges as ModeEdge[]);
+    setActiveMode(snapshot.mode as DiagramMode);
+    setSnapshotOpen(false);
+  }, [setNodes, setEdges]);
+
   const buildInspectorData = useCallback((node: ModeNode): InspectorData => {
     const analysis = (analysisData?.analysis as Record<string, unknown>) || null;
     const services = (analysis?.services as DetectedService[]) || [];
@@ -670,6 +721,16 @@ export default function ArchitecturePage() {
       methods: node.data.methods, properties: node.data.properties,
       extends: node.data.extends, implements: node.data.implements,
       serviceData: service,
+      severity: node.data.severity,
+      risk: node.data.risk,
+      recommendation: node.data.recommendation,
+      category: node.data.category,
+      eventType: node.data.eventType,
+      timestamp: node.data.timestamp,
+      group: node.data.group,
+      environment: node.data.environment,
+      version: node.data.version,
+      confidence: node.data.confidence,
     };
   }, [analysisData]);
 
@@ -726,9 +787,11 @@ export default function ArchitecturePage() {
     if (activeFilter === "services") {
       result = result.filter((n) => ["frontend", "backend", "service"].includes(n.data.nodeType));
     } else if (activeFilter === "infrastructure") {
-      result = result.filter((n) => ["infrastructure", "database", "queue"].includes(n.data.nodeType));
+      result = result.filter((n) => ["infrastructure", "database", "queue", "cloud"].includes(n.data.nodeType));
     } else if (activeFilter === "dependencies") {
       result = result.filter((n) => n.data.dependencyCount > 0 || (n.data.dependencies?.length || 0) > 0);
+    } else if (activeFilter === "security") {
+      result = result.filter((n) => n.data.severity || n.data.nodeType === "security");
     }
     if (techFilter) {
       result = result.filter((n) => n.data.technology?.toLowerCase().includes(techFilter.toLowerCase()));
@@ -737,7 +800,7 @@ export default function ArchitecturePage() {
   }, [nodes, searchQuery, activeFilter, techFilter]);
 
   const filteredEdges = useMemo(() => {
-    if (activeFilter === "services" || activeFilter === "infrastructure") {
+    if (activeFilter === "services" || activeFilter === "infrastructure" || activeFilter === "security") {
       const validIds = new Set(filteredNodes.map((n) => n.id));
       return edges.filter((e) => validIds.has(e.source) && validIds.has(e.target));
     }
@@ -790,7 +853,7 @@ export default function ArchitecturePage() {
             onValueChange={(v) => { setActiveMode(v as DiagramMode); setInspectorData(null); }}
             className="w-full"
           >
-            <TabsList className="bg-[#1c1f27] border border-[#414754] p-1 w-full justify-start gap-0.5 h-10">
+            <TabsList className="bg-[#1c1f27] border border-[#414754] p-1 w-full justify-start gap-0.5 h-10 overflow-x-auto">
               {DIAGRAM_MODES.map((mode) => {
                 const Icon = MODE_ICONS[mode.id] || Network;
                 const isActive = activeMode === mode.id;
@@ -798,7 +861,7 @@ export default function ArchitecturePage() {
                   <TabsTrigger
                     key={mode.id}
                     value={mode.id}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-md transition-all data-[state=active]:bg-[#0070f3]/15 data-[state=active]:text-[#0070f3] data-[state=active]:shadow-none text-[#8b90a0] hover:text-[#e0e2ed]`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-md transition-all shrink-0 data-[state=active]:bg-[#0070f3]/15 data-[state=active]:text-[#0070f3] data-[state=active]:shadow-none text-[#8b90a0] hover:text-[#e0e2ed]`}
                   >
                     <Icon className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">{mode.label}</span>
@@ -849,24 +912,77 @@ export default function ArchitecturePage() {
             </Badge>
 
             {analysisExists && (
-              <div className="hidden md:flex items-center gap-0.5 rounded-lg border border-[#414754] bg-[#1c1f27] p-0.5">
-                <button onClick={zoomIn} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Zoom In">
-                  <ZoomIn className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={zoomOut} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Zoom Out">
-                  <ZoomOut className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => fitView({ padding: 0.3, duration: 300 })} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Fit to Screen">
-                  <Maximize className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={resetView} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Reset View">
-                  <Minimize className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-
-            {analysisExists && (
               <>
+                <div className="hidden md:flex items-center gap-0.5 rounded-lg border border-[#414754] bg-[#1c1f27] p-0.5">
+                  <button onClick={zoomIn} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Zoom In">
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={zoomOut} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Zoom Out">
+                    <ZoomOut className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => fitView({ padding: 0.3, duration: 300 })} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Fit to Screen">
+                    <Maximize className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={resetView} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Reset View">
+                    <Minimize className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={saveSnapshot}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#414754] text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#272a32] transition-all"
+                        title="Save Snapshot"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-[#1c1f27] border-[#414754] text-[#e0e2ed] text-xs">
+                      Save architecture snapshot
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setSnapshotOpen(true)}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#414754] text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#272a32] transition-all"
+                        title="Architecture Time Machine"
+                      >
+                        <History className="w-3.5 h-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-[#1c1f27] border-[#414754] text-[#e0e2ed] text-xs">
+                      Architecture Time Machine
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                {activeMode === "security" && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setSecurityOpen(true)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium rounded-lg bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/20 hover:bg-[#ef4444]/20 transition-all"
+                        >
+                          <Shield className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">
+                            {securityData?.totalCount ? `${securityData.totalCount} findings` : "Security"}
+                          </span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-[#1c1f27] border-[#414754] text-[#e0e2ed] text-xs">
+                        View security findings
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -883,6 +999,7 @@ export default function ArchitecturePage() {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+
                 <button
                   onClick={toggleFullscreen}
                   className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#414754] text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#272a32] transition-all"
@@ -903,6 +1020,7 @@ export default function ArchitecturePage() {
               { id: "services", label: "Services", icon: Server },
               { id: "infrastructure", label: "Infrastructure", icon: Box },
               { id: "dependencies", label: "Dependencies", icon: Network },
+              ...(activeMode === "security" ? [{ id: "security", label: "Security", icon: Shield }] : []),
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeFilter === tab.id;
@@ -1054,7 +1172,7 @@ export default function ArchitecturePage() {
           </div>
         )}
 
-        {/* Main canvas with Three.js background */}
+        {/* Main canvas */}
         <div className={`flex gap-3 min-h-0 ${fullscreen ? "fixed inset-0 z-50 bg-[#10131b] p-4" : "flex-1"}`}>
           <div className={`relative rounded-xl overflow-hidden glass-panel ${fullscreen ? "flex-1" : "flex-1"}`}>
             <ThreeBackground />
@@ -1095,7 +1213,11 @@ export default function ArchitecturePage() {
                   showInteractive={false}
                 />
                 <MiniMap
-                  nodeColor={(nd) => NODE_COLORS[(nd.data as ModeNode["data"])?.nodeType] || "#272a32"}
+                  nodeColor={(nd) => {
+                    const d = (nd.data as ModeNode["data"]);
+                    if (d.severity) return SEVERITY_COLORS[d.severity] || "#6b7280";
+                    return NODE_COLORS[d.nodeType] || "#272a32";
+                  }}
                   maskColor="rgba(16,19,27,0.85)"
                   className="glass-panel rounded-lg border-[#414754]"
                   style={{ width: 160, height: 100 }}
@@ -1271,6 +1393,133 @@ export default function ArchitecturePage() {
                 )}
               </div>
             </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Architecture Time Machine Dialog */}
+      <Dialog open={snapshotOpen} onOpenChange={setSnapshotOpen}>
+        <DialogContent className="max-w-2xl bg-[#10131b] border-[#414754] text-[#e0e2ed]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-[#0070f3]" />
+              Architecture Time Machine
+            </DialogTitle>
+            <DialogDescription className="text-[#8b90a0]">
+              Save and compare architecture snapshots over time
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[#8b90a0]">{snapshots.length} snapshots saved</p>
+              <Button onClick={saveSnapshot} size="sm" className="bg-[#0070f3] text-xs h-8">
+                <Camera className="w-3.5 h-3.5 mr-1" /> Save Current
+              </Button>
+            </div>
+            {snapshots.length === 0 ? (
+              <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-6 text-center">
+                <Clock className="w-8 h-8 text-[#414754] mx-auto mb-2" />
+                <p className="text-xs text-[#8b90a0]">No snapshots yet. Run analysis and save your first snapshot.</p>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-[50vh]">
+                <div className="space-y-2">
+                  {snapshots.map((snap) => (
+                    <div
+                      key={snap.id}
+                      className="flex items-center justify-between rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-3 hover:bg-[#1c1f27]/60 transition-all cursor-pointer"
+                      onClick={() => loadSnapshot(snap)}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-[#e0e2ed] truncate">{snap.name}</p>
+                          <Badge variant="outline" className="border-[#414754] text-[9px]">{snap.mode}</Badge>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-[10px] text-[#8b90a0] font-mono">
+                            {new Date(snap.createdAt).toLocaleString()}
+                          </span>
+                          {snap.branch && (
+                            <span className="text-[10px] text-[#8b90a0] flex items-center gap-1">
+                              <GitBranch className="w-2.5 h-2.5" /> {snap.branch}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); loadSnapshot(snap); }}
+                        className="text-[#0070f3] hover:text-[#0060d3] text-xs font-medium mr-2"
+                      >
+                        Load
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Security Findings Dialog */}
+      <Dialog open={securityOpen} onOpenChange={setSecurityOpen}>
+        <DialogContent className="max-w-3xl bg-[#10131b] border-[#414754] text-[#e0e2ed]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-[#ef4444]" />
+              Security Scan Results
+            </DialogTitle>
+            <DialogDescription className="text-[#8b90a0]">
+              Automated security analysis of repository configuration and credentials
+            </DialogDescription>
+          </DialogHeader>
+          {securityData ? (
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                {Object.entries(securityData.severityCounts || {}).map(([sev, count]) => (
+                  <div key={sev} className="flex-1 rounded-lg border border-[#414754] p-3 text-center">
+                    <p className="text-lg font-bold font-mono" style={{ color: SEVERITY_COLORS[sev] || "#8b90a0" }}>{count as number}</p>
+                    <p className="text-[10px] text-[#8b90a0]">{sev}</p>
+                  </div>
+                ))}
+              </div>
+              <ScrollArea className="max-h-[50vh]">
+                <div className="space-y-2">
+                  {securityData.findings.length === 0 ? (
+                    <div className="rounded-lg border border-[#22c55e]/30 bg-[#22c55e]/5 p-4 text-center">
+                      <UserCheck className="w-6 h-6 text-[#22c55e] mx-auto mb-1" />
+                      <p className="text-xs text-[#22c55e] font-medium">No security findings detected</p>
+                    </div>
+                  ) : (
+                    securityData.findings.map((f) => (
+                      <div key={f.id} className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: SEVERITY_COLORS[f.severity] }} />
+                            <p className="text-sm font-medium text-[#e0e2ed]">{f.title}</p>
+                          </div>
+                          <Badge variant="outline" className={`border-[${SEVERITY_COLORS[f.severity]}]/30 text-[10px]`} style={{ borderColor: `${SEVERITY_COLORS[f.severity]}40`, color: SEVERITY_COLORS[f.severity] }}>
+                            {f.severity}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-[#8b90a0] font-mono">{f.filePath}{f.lineNumber ? `:${f.lineNumber}` : ""}</p>
+                        {f.risk && <p className="text-[11px] text-[#c1c6d7] mt-1">{f.risk}</p>}
+                        {f.recommendation && (
+                          <div className="flex items-start gap-1.5 mt-1 text-[11px] text-[#10b981]">
+                            <Lightbulb className="w-3 h-3 mt-0.5 shrink-0" />
+                            <span>{f.recommendation}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-[#8b90a0]" />
+            </div>
           )}
         </DialogContent>
       </Dialog>

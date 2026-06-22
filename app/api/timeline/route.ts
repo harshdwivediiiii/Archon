@@ -11,7 +11,20 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   let workspaceId = searchParams.get("workspaceId");
 
-  if (!workspaceId) {
+  if (workspaceId) {
+    const hasAccess = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        OR: [
+          { ownerId: session.user.id },
+          { members: { some: { userId: session.user.id } } },
+        ],
+      },
+    });
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+  } else {
     const workspace = await prisma.workspace.findFirst({
       where: {
         OR: [

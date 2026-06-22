@@ -18,11 +18,16 @@ export async function POST(req: NextRequest) {
 
     const repository = await prisma.repository.findFirst({
       where: { id: repositoryId },
-      include: { project: { include: { workspace: true } } },
+      include: { project: { include: { workspace: { include: { members: true } } } } },
     });
 
     if (!repository) {
       return NextResponse.json({ error: "Repository not found" }, { status: 404 });
+    }
+
+    const isMember = repository.project.workspace.members.some((m) => m.userId === session.user.id);
+    if (!isMember && repository.project.workspace.ownerId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const account = await prisma.account.findFirst({

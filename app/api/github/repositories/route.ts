@@ -105,6 +105,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const project = await prisma.project.findFirst({
+      where: { id: projectId },
+      include: { workspace: { include: { members: true } } },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const isMember = project.workspace.members.some((m) => m.userId === session.user.id);
+    if (!isMember && project.workspace.ownerId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const token = await getGitHubAccessToken(session.user.id);
     if (!token) {
       return NextResponse.json(

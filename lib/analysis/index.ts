@@ -8,6 +8,7 @@ import { buildGraph } from "./graph-builder";
 import { generateReactFlowDiagram } from "./diagram-generator";
 import { generateDocumentation } from "./doc-generator";
 import { analyzeArchitecture } from "@/lib/ai/architecture-analyzer";
+import { scanForSecrets } from "./security";
 import {
   AnalysisResult,
   DetectedService,
@@ -38,11 +39,13 @@ export async function runAnalysis(
             ? "BUILDING_GRAPH"
             : stage === "ai_analysis"
               ? "AI_ANALYSIS"
-              : stage === "diagrams"
-                ? "GENERATING_DIAGRAMS"
-                : stage === "docs"
-                  ? "GENERATING_DOCS"
-                  : "COMPLETED";
+              : stage === "security"
+                ? "ANALYZING"
+                : stage === "diagrams"
+                  ? "GENERATING_DIAGRAMS"
+                  : stage === "docs"
+                    ? "GENERATING_DOCS"
+                    : "COMPLETED";
 
     await prisma.analysis.update({
       where: { repositoryId },
@@ -233,6 +236,37 @@ export async function runAnalysis(
       });
     } catch (err) {
       console.error("AI analysis failed (non-blocking):", err);
+    }
+
+    // Security scanning stage
+    await updateProgress("security", 78);
+    try {
+      const currentAnalysis = await prisma.analysis.findUnique({ where: { repositoryId } });
+      for (const [filePath, content] of walkResult.fileContents) {
+        const findings = scanForSecrets(filePath, content);
+        for (const finding of findings) {
+          await prisma.securityFinding.upsert({
+            where: { id: `${repositoryId}-${finding.filePath}-${finding.lineNumber || 0}` },
+            create: {
+              id: `${repositoryId}-${finding.filePath}-${finding.lineNumber || 0}`,
+              severity: finding.severity as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO",
+              category: finding.category as "HARDCODED_SECRET" | "API_KEY" | "TOKEN" | "PASSWORD" | "PRIVATE_KEY" | "CONNECTION_STRING" | "EXPOSED_CREDENTIAL" | "UNSAFE_CONFIG" | "PUBLIC_RESOURCE" | "PRIVILEGE_ESCALATION",
+              title: finding.title,
+              description: finding.description,
+              filePath: finding.filePath,
+              lineNumber: finding.lineNumber,
+              codeSnippet: finding.codeSnippet,
+              risk: finding.risk,
+              recommendation: finding.recommendation,
+              repositoryId,
+              analysisId: currentAnalysis?.id,
+            },
+            update: {},
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Security scanning failed (non-blocking):", err);
     }
 
     await updateProgress("diagrams", 80);

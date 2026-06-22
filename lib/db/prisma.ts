@@ -24,7 +24,11 @@ function createPool(): Pool {
     max: url.searchParams.get("pgbouncer") === "true" || url.port === "6543" ? 1 : 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
-    ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+    ssl: isRemote
+      ? process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true"
+        ? { rejectUnauthorized: true }
+        : { rejectUnauthorized: false }
+      : undefined,
   });
 }
 

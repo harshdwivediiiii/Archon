@@ -65,6 +65,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
+  @@index([userId])
   @@map("accounts")
 }
 
@@ -75,6 +76,7 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("sessions")
 }
 
@@ -100,7 +102,10 @@ model Workspace {
   members  WorkspaceMember[]
   projects Project[]
   chats    Chat[]
+  invitations Invitation[]
+  knowledgeNodes KnowledgeNode[]
 
+  @@index([ownerId])
   @@map("workspaces")
 }
 
@@ -132,6 +137,7 @@ model Project {
   documents    Document[]
   diagrams     Diagram[]
 
+  @@index([workspaceId])
   @@map("projects")
 }
 
@@ -151,8 +157,10 @@ model Repository {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  documents Document[]
-  analyses  Analysis[]
+  documents            Document[]
+  analyses             Analysis[]
+  architectureSnapshots ArchitectureSnapshot[]
+  securityFindings      SecurityFinding[]
 
   @@unique([projectId, fullName])
   @@map("repositories")
@@ -193,6 +201,8 @@ model Analysis {
   codebaseMap  Json?
   aiAnalysis   Json?
 
+  securityFindings SecurityFinding[]
+
   @@unique([repositoryId])
   @@map("analyses")
 }
@@ -216,6 +226,9 @@ model Document {
 
   diagrams Diagram[]
 
+  @@index([userId])
+  @@index([projectId])
+  @@index([repositoryId])
   @@map("documents")
 }
 
@@ -234,6 +247,8 @@ model Diagram {
   documentId String?
   document   Document? @relation(fields: [documentId], references: [id])
 
+  @@index([projectId])
+  @@index([documentId])
   @@map("diagrams")
 }
 
@@ -249,9 +264,11 @@ model KnowledgeNode {
   updatedAt DateTime @updatedAt
 
   workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
   sourcesFrom KnowledgeEdge[] @relation("Source")
   targetsTo   KnowledgeEdge[] @relation("Target")
 
+  @@index([workspaceId])
   @@map("knowledge_nodes")
 }
 
@@ -267,6 +284,8 @@ model KnowledgeEdge {
   source KnowledgeNode @relation("Source", fields: [sourceId], references: [id], onDelete: Cascade)
   target KnowledgeNode @relation("Target", fields: [targetId], references: [id], onDelete: Cascade)
 
+  @@index([sourceId])
+  @@index([targetId])
   @@map("knowledge_edges")
 }
 
@@ -283,6 +302,8 @@ model Chat {
 
   messages Message[]
 
+  @@index([userId])
+  @@index([workspaceId])
   @@map("chats")
 }
 
@@ -299,6 +320,8 @@ model Message {
   userId  String?
   user    User?  @relation(fields: [userId], references: [id])
 
+  @@index([chatId])
+  @@index([userId])
   @@map("messages")
 }
 
@@ -328,6 +351,7 @@ model UsageRecord {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
+  @@index([userId])
   @@map("usage_records")
 }
 
@@ -341,8 +365,77 @@ model Invitation {
   createdAt DateTime @default(now())
 
   workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
   inviterId   String
   inviter     User @relation("SentInvitations", fields: [inviterId], references: [id])
 
+  @@index([workspaceId])
+  @@index([inviterId])
   @@map("invitations")
+}
+
+model ArchitectureSnapshot {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  mode         String   @default("system")
+  nodes        Json
+  edges        Json
+  metadata     Json?
+  commitSha    String?
+  branch       String?
+  tag          String?
+  analysisRun  String?
+  createdAt    DateTime @default(now())
+
+  repositoryId String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([repositoryId, createdAt])
+  @@map("architecture_snapshots")
+}
+
+enum SecuritySeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum SecurityCategory {
+  HARDCODED_SECRET
+  API_KEY
+  TOKEN
+  PASSWORD
+  PRIVATE_KEY
+  CONNECTION_STRING
+  EXPOSED_CREDENTIAL
+  UNSAFE_CONFIG
+  PUBLIC_RESOURCE
+  PRIVILEGE_ESCALATION
+}
+
+model SecurityFinding {
+  id              String            @id @default(cuid())
+  severity        SecuritySeverity  @default(MEDIUM)
+  category        SecurityCategory  @default(HARDCODED_SECRET)
+  title           String
+  description     String?
+  filePath        String
+  lineNumber      Int?
+  codeSnippet     String?
+  risk            String?
+  recommendation  String?
+  dismissed       Boolean           @default(false)
+  discoveredAt    DateTime          @default(now())
+  resolvedAt      DateTime?
+
+  repositoryId String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  analysisId   String?
+  analysis     Analysis?  @relation(fields: [analysisId], references: [id])
+
+  @@index([analysisId])
+  @@map("security_findings")
 }

@@ -11,7 +11,7 @@ loadEnvFiles();
 const migrationUrl =
   getDirectDatabaseUrlFromEnv() ??
   process.env.DATABASE_URL ??
-  "postgresql://build:build@127.0.0.1:5432/build?schema=public";
+  "postgresql://placeholder:placeholder@localhost:5432/placeholder?schema=public";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",

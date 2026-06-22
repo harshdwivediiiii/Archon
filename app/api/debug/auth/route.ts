@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { authConfig } from "@/lib/auth";
+import { auth, authConfig } from "@/lib/auth";
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const envStatus = getEnvStatus();
   const providerStatus = getProviderStatus();
   const callbackUrls = getCallbackUrls();

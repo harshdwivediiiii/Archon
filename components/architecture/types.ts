@@ -115,6 +115,7 @@ export interface AiAnalysisData {
   architectureStyle?: string;
   complexity?: string;
   scalability?: string;
+  services?: Record<string, string>;
 }
 
 export interface TechInsight {
@@ -143,4 +144,35 @@ export interface UMLClass {
   methods: { name: string; params: string; returnType: string; visibility: string }[];
   extends?: string;
   implements?: string[];
+}
+
+export interface ArchitectureSnapshot {
+  id: string;
+  name: string;
+  description?: string;
+  mode: string;
+  nodes: unknown[];
+  edges: unknown[];
+  metadata?: Record<string, unknown>;
+  commitSha?: string;
+  branch?: string;
+  tag?: string;
+  analysisRun?: string;
+  createdAt: string;
+  repositoryId: string;
+}
+
+export interface SecurityFinding {
+  id: string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO";
+  category: string;
+  title: string;
+  description?: string;
+  filePath: string;
+  lineNumber?: number;
+  codeSnippet?: string;
+  risk?: string;
+  recommendation?: string;
+  dismissed: boolean;
+  discoveredAt: string;
 }

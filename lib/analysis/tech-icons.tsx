@@ -254,6 +254,67 @@ const DefaultServiceIcon = ({ size, className }: TechIconProps) =>
     size, className
   );
 
+const SpringIcon = ({ size, className }: TechIconProps) =>
+  createSvg(
+    React.createElement(React.Fragment, null,
+      React.createElement("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6 2.69-6 6-6z", fill: "none", stroke: "currentColor", strokeWidth: "1.5" }),
+      React.createElement("path", { d: "M8 12l2 2 4-4", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" })
+    ),
+    size, className
+  );
+
+const AzureIcon = ({ size, className }: TechIconProps) =>
+  createSvg(
+    React.createElement(React.Fragment, null,
+      React.createElement("path", { d: "M12 2L3 9v5l9-7 9 7V9l-9-7zm0 4l7 5v4l-7-5-7 5v-4l7-5z", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinejoin: "round" }),
+      React.createElement("path", { d: "M7 14l5 3 5-3", fill: "none", stroke: "currentColor", strokeWidth: "1", strokeLinecap: "round" })
+    ),
+    size, className
+  );
+
+const GCPIcon = ({ size, className }: TechIconProps) =>
+  createSvg(
+    React.createElement(React.Fragment, null,
+      React.createElement("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 14h-2v-2h2v2zm-4 0h-2v-2h2v2z", fill: "none", stroke: "currentColor", strokeWidth: "1.5" }),
+      React.createElement("circle", { cx: "12", cy: "9", r: "2", fill: "none", stroke: "currentColor", strokeWidth: "1.5" })
+    ),
+    size, className
+  );
+
+const GraphQLIcon = ({ size, className }: TechIconProps) =>
+  createSvg(
+    React.createElement(React.Fragment, null,
+      React.createElement("path", { d: "M12 2L2 7v10l10 5 10-5V7l-10-5zm0 3l6 3v6l-6 3-6-3V8l6-3z", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinejoin: "round" }),
+      React.createElement("circle", { cx: "12", cy: "12", r: "2", fill: "none", stroke: "currentColor", strokeWidth: "1" })
+    ),
+    size, className
+  );
+
+const gRPCIcon = ({ size, className }: TechIconProps) =>
+  createSvg(
+    React.createElement(React.Fragment, null,
+      React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "3", fill: "none", stroke: "currentColor", strokeWidth: "1.5" }),
+      React.createElement("path", { d: "M9 12h6M12 9v6", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" })
+    ),
+    size, className
+  );
+
+const WebSocketIcon = ({ size, className }: TechIconProps) =>
+  createSvg(
+    React.createElement(React.Fragment, null,
+      React.createElement("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14l-3-3 3-3m4 0l3 3-3 3", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" })
+    ),
+    size, className
+  );
+
+const NGINXIcon = ({ size, className }: TechIconProps) =>
+  createSvg(
+    React.createElement(React.Fragment, null,
+      React.createElement("path", { d: "M12 2L3 8v8l9 6 9-6V8l-9-6zm0 3l6 4v4l-6 4-6-4V9l6-4z", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinejoin: "round" })
+    ),
+    size, className
+  );
+
 export const TECH_ICONS: Record<string, React.ComponentType<TechIconProps>> = {
   "Next.js": NextJsIcon,
   "next": NextJsIcon,
@@ -318,6 +379,27 @@ export const TECH_ICONS: Record<string, React.ComponentType<TechIconProps>> = {
   "SQLite": SQLiteIcon,
   "sqlite": SQLiteIcon,
   "sqlite3": SQLiteIcon,
+  "Spring": SpringIcon,
+  "spring": SpringIcon,
+  "Spring Boot": SpringIcon,
+  "spring-boot": SpringIcon,
+  "Azure": AzureIcon,
+  "azure": AzureIcon,
+  "GCP": GCPIcon,
+  "gcp": GCPIcon,
+  "Google Cloud": GCPIcon,
+  "GraphQL": GraphQLIcon,
+  "graphql": GraphQLIcon,
+  "gql": GraphQLIcon,
+  "gRPC": gRPCIcon,
+  "grpc": gRPCIcon,
+  "WebSocket": WebSocketIcon,
+  "websocket": WebSocketIcon,
+  "ws": WebSocketIcon,
+  "NGINX": NGINXIcon,
+  "nginx": NGINXIcon,
+  "Fastify": NodeJsIcon,
+  "fastify": NodeJsIcon,
 };
 
 export function getTechIcon(technology: string): React.ComponentType<TechIconProps> {

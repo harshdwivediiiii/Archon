@@ -26,6 +26,12 @@ export async function GET(req: NextRequest) {
 
   const where: Record<string, unknown> = {};
   if (projectId) {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, workspaceId: workspace.id },
+    });
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
     where.projectId = projectId;
   } else {
     const projects = await prisma.project.findMany({

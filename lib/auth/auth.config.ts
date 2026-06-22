@@ -49,12 +49,11 @@ async function getVerifiedGitHubProfile({
  */
 export const authConfig = {
   secret: process.env.AUTH_SECRET,
-  trustHost: true,
+  trustHost: process.env.NODE_ENV === "production" ? false : true,
   providers: [
     GitHub({
       clientId: process.env.AUTH_GITHUB_ID,
       clientSecret: process.env.AUTH_GITHUB_SECRET,
-      allowDangerousEmailAccountLinking: true,
       userinfo: {
         url: "https://api.github.com/user",
         request: getVerifiedGitHubProfile,
@@ -71,7 +70,6 @@ export const authConfig = {
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
       clientSecret: process.env.AUTH_GOOGLE_SECRET,
-      allowDangerousEmailAccountLinking: true,
     }),
   ],
   callbacks: {
