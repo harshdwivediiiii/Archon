@@ -61,6 +61,14 @@ const envSchema = z.object({
   AUTH_GITHUB_SECRET: z.string().min(1, "AUTH_GITHUB_SECRET is required"),
   AUTH_GOOGLE_ID: z.string().min(1, "AUTH_GOOGLE_ID is required"),
   AUTH_GOOGLE_SECRET: z.string().min(1, "AUTH_GOOGLE_SECRET is required"),
+  AUTH_URL: z
+    .string()
+    .url("AUTH_URL must be a valid URL")
+    .optional()
+    .refine(
+      (value) => !value || !isPlaceholder(value),
+      "AUTH_URL must be a real URL, not a placeholder"
+    ),
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
   STRIPE_SECRET_KEY: z.string(),
   STRIPE_WEBHOOK_SECRET: z.string(),
@@ -89,6 +97,8 @@ function loadRawEnv(): Record<string, string | undefined> {
     AUTH_GITHUB_SECRET: process.env.AUTH_GITHUB_SECRET,
     AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
     AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
+    AUTH_URL:
+      process.env.AUTH_URL ?? process.env.NEXTAUTH_URL,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? "",
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? "",
