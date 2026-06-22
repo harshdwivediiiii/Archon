@@ -9,7 +9,12 @@ export async function GET() {
   }
 
   const workspace = await prisma.workspace.findFirst({
-    where: { ownerId: session.user.id },
+    where: {
+      OR: [
+        { ownerId: session.user.id },
+        { members: { some: { userId: session.user.id } } },
+      ],
+    },
     include: {
       members: {
         include: { user: { select: { id: true, name: true, email: true, image: true } } },

@@ -152,9 +152,48 @@ model Repository {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   documents Document[]
+  analyses  Analysis[]
 
   @@unique([projectId, fullName])
   @@map("repositories")
+}
+
+enum AnalysisStatus {
+  PENDING
+  CLONING
+  ANALYZING
+  BUILDING_GRAPH
+  GENERATING_DIAGRAMS
+  GENERATING_DOCS
+  COMPLETED
+  FAILED
+}
+
+model Analysis {
+  id           String         @id @default(cuid())
+  status       AnalysisStatus @default(PENDING)
+  progress     Int            @default(0)
+  stage        String         @default("")
+  startedAt    DateTime       @default(now())
+  completedAt  DateTime?
+  error        String?
+
+  repositoryId String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  services     Json?
+  apis         Json?
+  databases    Json?
+  dependencies Json?
+  infra        Json?
+  modules      Json?
+  events       Json?
+  files        Json?
+  codebaseMap  Json?
+  aiAnalysis   Json?
+
+  @@unique([repositoryId])
+  @@map("analyses")
 }
 
 model Document {

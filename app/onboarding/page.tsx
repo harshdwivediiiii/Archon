@@ -20,6 +20,13 @@ export default function OnboardingPage() {
     setLoading(true);
     setError(null);
     try {
+      if (name.trim()) {
+        await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name.trim() }),
+        });
+      }
       const res = await fetch("/api/workspace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

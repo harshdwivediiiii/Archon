@@ -12,7 +12,12 @@ export async function GET(req: NextRequest) {
   const projectId = searchParams.get("projectId");
 
   const workspace = await prisma.workspace.findFirst({
-    where: { ownerId: session.user.id },
+    where: {
+      OR: [
+        { ownerId: session.user.id },
+        { members: { some: { userId: session.user.id } } },
+      ],
+    },
   });
 
   if (!workspace) {

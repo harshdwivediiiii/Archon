@@ -1,8 +1,7 @@
-// lib/ai/repository-analysis.ts
 import { getOpenAI } from "./openai";
 import { getEnv } from "@/lib/env";
 
-export async function analyzeRepository(name: string, content: string) {
+export async function analyzeRepository(name: string, content: string): Promise<Record<string, unknown>> {
   const openai = getOpenAI();
   const env = getEnv();
   const response = await openai.chat.completions.create({

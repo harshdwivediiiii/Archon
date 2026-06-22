@@ -26,7 +26,7 @@ interface Project {
   updatedAt: string;
 }
 
-interface ImportedRepo {
+interface RepoSummary {
   id: string;
   fullName: string;
   defaultBranch: string;
@@ -35,7 +35,7 @@ interface ImportedRepo {
 
 export function DashboardClient() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [repos, setRepos] = useState<ImportedRepo[]>([]);
+  const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ projects: 0, repos: 0, diagrams: 0 });
 
@@ -44,26 +44,20 @@ export function DashboardClient() {
 
     async function load() {
       try {
-        const res = await fetch("/api/projects");
-        if (!res.ok || cancelled) return;
-        const data: Project[] = await res.json();
+        const [projRes, repoRes] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/repositories"),
+        ]);
+        if (cancelled) return;
 
-        let repoCount = 0;
-        for (const p of data) {
-          if (cancelled) break;
-          const pRes = await fetch(`/api/projects/${p.id}`);
-          if (pRes.ok) {
-            const pData = await pRes.json();
-            repoCount += pData.repositories?.length ?? 0;
-          }
-        }
-
-        if (!cancelled) {
+        if (projRes.ok) {
+          const data: Project[] = await projRes.json();
           setProjects(data);
-          setRepos([]);
+          const repoData = repoRes.ok ? await repoRes.json() : [];
+          setRepos(repoData);
           setStats({
             projects: data.length,
-            repos: repoCount,
+            repos: repoData.length,
             diagrams: data.reduce((a: number, p: Project) => a + p.diagramCount, 0),
           });
         }
