@@ -71,7 +71,7 @@ function getServiceFunctions(service: DetectedService, result: AnalysisResult): 
   return [...new Set(funcs)].slice(0, 8);
 }
 
-function getServiceClasses(service: DetectedService): string[] {
+function getServiceClasses(service: DetectedService): string[] | undefined {
   const classes: string[] = [];
   const tech = service.technology?.toLowerCase() || "";
   if (tech.includes("nestjs") || tech.includes("nest")) classes.push("Module", "Controller", "Service");
@@ -82,7 +82,7 @@ function getServiceClasses(service: DetectedService): string[] {
   if (service.name.includes("controller") || service.name.includes("Controller")) classes.push("Controller");
   if (service.name.includes("service") || service.name.includes("Service")) classes.push("Service");
   if (service.name.includes("repo") || service.name.includes("Repository")) classes.push("Repository");
-  return classes.length > 0 ? classes : undefined as unknown as string[];
+  return classes.length > 0 ? classes : undefined;
 }
 
 export function generateReactFlowDiagram(

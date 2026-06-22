@@ -6,9 +6,14 @@ const API_PATTERNS: Record<string, { regex: RegExp; type: DetectedApi["type"]; m
     { regex: /app\.(get|post|put|delete|patch)\(['"](.+?)['"]/g, type: "rest", method: "" },
     { regex: /@app\.(get|post|put|delete)\(['"](.+?)['"]/g, type: "rest", method: "" },
     { regex: /@(Get|Post|Put|Delete|Patch)\(['"](.+?)['"]/g, type: "rest", method: "" },
-    { regex: /\.route\(['"](.+?)['"]\)\.[(get|post|put|delete)]/g, type: "rest", method: "" },
-    { regex: /@RequestMapping\(.*method\s*=\s*(RequestMethod\.)?(\w+)/g, type: "rest", method: "" },
+    { regex: /@(Get|Post|Put|Delete|Patch)\(\)/g, type: "rest", method: "" },
+    { regex: /\.route\(['"](.+?)['"]\)\.(get|post|put|delete)/g, type: "rest", method: "" },
+    { regex: /@RequestMapping\([^)]*value\s*=\s*['"](.+?)['"]/g, type: "rest", method: "" },
     { regex: /Route::(get|post|put|delete|patch)\(['"](.+?)['"]/g, type: "rest", method: "" },
+    { regex: /@app\.route\(['"](.+?)['"]/g, type: "rest", method: "" },
+    { regex: /url\(['"](.+?)['"],\s*(?!.*admin)/g, type: "rest", method: "" },
+    { regex: /\.add_url_rule\(['"](.+?)['"]/g, type: "rest", method: "" },
+    { regex: /api\.add_resource\(/g, type: "rest", method: "" },
   ],
   "graphql": [
     { regex: /graphql/gi, type: "graphql", method: "POST" },
@@ -34,6 +39,30 @@ const API_PATTERNS: Record<string, { regex: RegExp; type: DetectedApi["type"]; m
   ],
 };
 
+function extractMethodAndPath(match: RegExpMatchArray): { method: string; path: string } {
+  const httpMethods = new Set(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]);
+  let method = (match[1] || "").toUpperCase();
+  let path: string;
+
+  if (match[2] !== undefined) {
+    if (httpMethods.has(method)) {
+      path = match[2];
+    } else {
+      path = match[1];
+      method = (match[2] || "GET").toUpperCase();
+    }
+  } else {
+    if (httpMethods.has(method)) {
+      path = "/";
+    } else {
+      path = match[1] || "/";
+      method = "GET";
+    }
+  }
+
+  return { method, path };
+}
+
 export function detectApis(
   filePath: string,
   content: string,
@@ -49,8 +78,7 @@ export function detectApis(
     for (const { regex, type } of patterns) {
       const matches = content.matchAll(regex);
       for (const match of matches) {
-        const method = match[1]?.toUpperCase() || "GET";
-        const path = match[2] || match[1] || "/";
+        const { method, path } = extractMethodAndPath(match);
         apis.push({
           method,
           path,

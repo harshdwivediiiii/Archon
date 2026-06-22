@@ -14,7 +14,7 @@ const NODE_TYPE_MAP: Record<string, string> = {
 export function buildGraph(result: AnalysisResult): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
-  const addedNodes = new Map<string, GraphNode>();
+  const addedNodes = new Map<string, GraphNode | null>();
 
   // Build module lookup by import name
   const moduleByImport = new Map<string, DetectedModule[]>();
@@ -68,7 +68,8 @@ export function buildGraph(result: AnalysisResult): { nodes: GraphNode[]; edges:
         }
       } else {
         // It's an external library import - create a library node
-        const libName = imp.split("/")[0];
+        // Sanitize: strip .ClassName suffix (e.g. "flask.Flask" → "flask") and path segments
+        const libName = imp.split("/")[0].split(".")[0];
         const libNodeId = `lib-${libName}`;
         if (!addedNodes.has(libNodeId)) {
           const libNode: GraphNode = {
@@ -203,30 +204,32 @@ function findServiceForFile(
   services: AnalysisResult["services"],
   filePath: string
 ): AnalysisResult["services"][number] | null {
+  // Score services by how many path segments match, return best match
+  let bestScore = 0;
+  let best: AnalysisResult["services"][number] | null = null;
+  const fileSegments = filePath.split("/");
   for (const service of services) {
-    if (filePath.startsWith(service.sourcePath.split("/").slice(0, -1).join("/"))) {
-      return service;
+    const svcSegments = service.sourcePath.split("/");
+    let score = 0;
+    for (let i = 0; i < Math.min(fileSegments.length, svcSegments.length); i++) {
+      if (fileSegments[i] === svcSegments[i]) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = service;
     }
   }
-  // Try matching by directory prefix
-  const dirs = filePath.split("/");
-  for (let i = dirs.length - 1; i >= 0; i--) {
-    const prefix = dirs.slice(0, i).join("/");
-    for (const service of services) {
-      if (service.sourcePath.includes(prefix)) {
-        return service;
-      }
-    }
-  }
-  return services[0] || null;
+  return best;
 }
 
 function findServiceForImport(
   services: AnalysisResult["services"],
   importPath: string
 ): AnalysisResult["services"][number] | null {
+  // Normalize: strip file extensions and submodule paths
+  const normalized = importPath.replace(/\.(ts|js|tsx|jsx|py)$/, "").split("/")[0];
   for (const service of services) {
-    if (importPath.includes(service.name) || service.name.includes(importPath)) {
+    if (normalized === service.name || normalized.startsWith(service.name + "/")) {
       return service;
     }
   }

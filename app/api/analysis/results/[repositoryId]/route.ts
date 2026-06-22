@@ -39,10 +39,15 @@ export async function GET(
 
   const diagrams = await prisma.diagram.findMany({
     where: {
-      metadata: {
-        path: ["repositoryId"],
-        equals: repositoryId,
-      },
+      OR: [
+        { projectId: repository.projectId },
+        {
+          metadata: {
+            path: ["repositoryId"],
+            equals: repositoryId,
+          },
+        },
+      ],
     },
     orderBy: { createdAt: "desc" },
     take: 10,
@@ -60,9 +65,23 @@ export async function GET(
     include: { sourcesFrom: true, targetsTo: true },
   });
 
+  const edgeIds = new Set<string>();
   const graphEdges: unknown[] = [];
   for (const node of knowledgeNodes) {
-    graphEdges.push(...node.sourcesFrom, ...node.targetsTo);
+    for (const edge of node.sourcesFrom) {
+      const key = `${edge.sourceId}:${edge.targetId}:${edge.id}`;
+      if (!edgeIds.has(key)) {
+        edgeIds.add(key);
+        graphEdges.push(edge);
+      }
+    }
+    for (const edge of node.targetsTo) {
+      const key = `${edge.sourceId}:${edge.targetId}:${edge.id}`;
+      if (!edgeIds.has(key)) {
+        edgeIds.add(key);
+        graphEdges.push(edge);
+      }
+    }
   }
 
   const payload: Record<string, unknown> = {

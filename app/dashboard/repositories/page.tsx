@@ -131,6 +131,7 @@ export default function RepositoriesPage() {
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState<Record<string, AnalysisProgress>>({});
   const [analysisResults, setAnalysisResults] = useState<Record<string, AnalysisResult>>({});
+  const [mentorExpanded, setMentorExpanded] = useState(true);
   const progressRef = useRef<Record<string, EventSource>>({});
 
   useEffect(() => {
@@ -299,25 +300,24 @@ export default function RepositoriesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Top Context Header */}
+        {/* Repository Context Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+            <div className="flex items-center gap-2 text-[10px] font-semibold tracking-widest text-[#8b90a0] uppercase">
               <Terminal className="h-3.5 w-3.5" />
               Repository Context
             </div>
-            <h3 className="text-2xl font-semibold text-white md:text-3xl">
+            <h3 className="text-2xl font-black text-[#e0e2ed] tracking-tight md:text-3xl">
               {importedRepos.length > 0 ? importedRepos[0].fullName : "Repository Intelligence"}
             </h3>
-            <div className="mt-1 flex items-center gap-3 text-sm text-zinc-400">
+            <div className="flex items-center gap-3 text-xs text-[#8b90a0] flex-wrap">
               {importedRepos.length > 0 && (
                 <>
-                  <Badge variant="outline" className="flex items-center gap-1 border-zinc-700 px-2 py-0.5 text-xs font-mono text-zinc-300">
+                  <code className="bg-[#272a32] px-1.5 py-0.5 rounded text-[#e0e2ed] font-mono text-[11px] flex items-center gap-1">
                     <GitBranch className="h-3 w-3" />
                     {importedRepos[0].defaultBranch}
-                  </Badge>
-                  <span className="flex items-center gap-1 text-xs text-zinc-500">
-                    <RefreshCw className="h-3 w-3" />
+                  </code>
+                  <span className="flex items-center gap-1 text-xs text-[#8b90a0]">
                     Last sync {formatTimeAgo(importedRepos[0].lastSyncedAt)}
                   </span>
                 </>
@@ -328,7 +328,7 @@ export default function RepositoriesPage() {
             <Button
               variant="default"
               size="sm"
-              className="bg-primary-container text-primary-foreground hover:bg-primary-container/90"
+              className="bg-[#0070f3] hover:bg-[#0060d3] text-white"
               onClick={() => {
                 if (importedRepos.length > 0) handleSync(importedRepos[0].id);
               }}
@@ -337,7 +337,7 @@ export default function RepositoriesPage() {
               <RefreshCw className={`mr-2 h-4 w-4 ${syncingId !== null ? "animate-spin" : ""}`} />
               Rescan Repo
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="border-[#414754] text-[#e0e2ed] hover:bg-[#272a32]">
               <Share2 className="mr-2 h-4 w-4" />
               Export Graph
             </Button>
@@ -346,7 +346,7 @@ export default function RepositoriesPage() {
 
         {/* Error */}
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <div className="rounded-lg border border-[#ffb4ab]/30 bg-[#ffb4ab]/10 px-4 py-3 text-sm text-[#ffb4ab]">
             {error}
             <button className="ml-2 underline" onClick={() => setError(null)}>Dismiss</button>
           </div>
@@ -355,7 +355,7 @@ export default function RepositoriesPage() {
         {/* Loading */}
         {loading && (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#8b90a0]" />
           </div>
         )}
 
@@ -366,21 +366,27 @@ export default function RepositoriesPage() {
             <div className="space-y-6 md:col-span-8">
               {/* Knowledge Graph Node Canvas */}
               <div className="glass-panel relative min-h-[460px] overflow-hidden rounded-xl">
-                <div className="absolute inset-0 graph-canvas" />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage: "radial-gradient(circle at 1px 1px, #272a32 1px, transparent 0)",
+                    backgroundSize: "40px 40px",
+                  }}
+                />
 
                 {/* SVG connection lines */}
                 <svg className="absolute inset-0 h-full w-full" style={{ pointerEvents: "none" }}>
-                  <line x1="50%" y1="35%" x2="25%" y2="25%" stroke="#414754" strokeWidth="1.5" strokeDasharray="4 4" />
-                  <line x1="50%" y1="35%" x2="75%" y2="25%" stroke="#414754" strokeWidth="1.5" strokeDasharray="4 4" />
-                  <line x1="50%" y1="35%" x2="50%" y2="60%" stroke="#414754" strokeWidth="1.5" strokeDasharray="4 4" />
+                  <line x1="50%" y1="35%" x2="25%" y2="25%" stroke="#0070f3" strokeOpacity="0.3" strokeWidth="1.5" strokeDasharray="4 4" className="edge-flowing" />
+                  <line x1="50%" y1="35%" x2="75%" y2="25%" stroke="#0070f3" strokeOpacity="0.3" strokeWidth="1.5" strokeDasharray="4 4" className="edge-flowing" />
+                  <line x1="50%" y1="35%" x2="50%" y2="60%" stroke="#dbb8ff" strokeOpacity="0.3" strokeWidth="1.5" strokeDasharray="4 4" className="edge-flowing" />
                 </svg>
 
                 {/* Central node */}
                 <div className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2">
-                  <div className="node-pulse relative flex h-24 w-24 items-center justify-center rounded-full border-2 border-primary-container bg-zinc-900">
-                    <GitMerge className="h-10 w-10 text-primary" />
+                  <div className="node-pulse-svg relative flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#0070f3] bg-[#1c1f27]">
+                    <GitMerge className="h-10 w-10 text-[#aec6ff]" />
                   </div>
-                  <p className="mt-2 text-center text-xs font-medium text-zinc-300">
+                  <p className="mt-2 text-center text-xs font-medium text-[#e0e2ed]">
                     {importedRepos.length > 0 ? importedRepos[0].fullName : "No Repository"}
                   </p>
                 </div>
@@ -406,19 +412,19 @@ export default function RepositoriesPage() {
                   return services.slice(0, 5).map((svc, i) => (
                     <div
                       key={svc.name}
-                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      className="absolute -translate-x-1/2 -translate-y-1/2 node-pulse-svg"
                       style={{ left: positions[i]?.left || "50%", top: positions[i]?.top || "50%" }}
                     >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-600 bg-zinc-900 transition-colors hover:border-primary-container cursor-pointer">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#414754] bg-[#1c1f27] transition-colors hover:border-[#0070f3] cursor-pointer">
                         {svc.type === "frontend" ? (
-                          <Code2 className="h-5 w-5 text-zinc-400" />
+                          <Code2 className="h-5 w-5 text-[#8b90a0]" />
                         ) : svc.type === "backend" ? (
-                          <Server className="h-5 w-5 text-zinc-400" />
+                          <Server className="h-5 w-5 text-[#8b90a0]" />
                         ) : (
-                          <Database className="h-5 w-5 text-zinc-400" />
+                          <Database className="h-5 w-5 text-[#8b90a0]" />
                         )}
                       </div>
-                      <p className="mt-1 text-center text-[10px] text-zinc-500 max-w-20 truncate">{svc.name}</p>
+                      <p className="mt-1 text-center text-[10px] text-[#8b90a0] max-w-20 truncate">{svc.name}</p>
                     </div>
                   ));
                 })}
@@ -426,13 +432,13 @@ export default function RepositoriesPage() {
                 {/* HUD overlay */}
                 <div className="absolute left-3 top-3 space-y-1.5">
                   <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1">
-                    <span className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
+                    <span className="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
                     <span className="text-[10px] font-semibold tracking-wide text-green-400">
                       {importedRepos.length > 0 ? "SYSTEM ACTIVE" : "NO DATA"}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1">
-                    <span className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_6px_rgba(249,115,22,0.6)]" />
+                    <span className="h-2 w-2 rounded-full bg-orange-400 shadow-[0_0_6px_rgba(251,146,60,0.6)]" />
                     <span className="text-[10px] font-semibold tracking-wide text-orange-400">
                       {importedRepos.length} REPOSITORIES
                     </span>
@@ -441,13 +447,13 @@ export default function RepositoriesPage() {
 
                 {/* Zoom controls */}
                 <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg bg-black/60 p-1">
-                  <button className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white">
+                  <button className="flex h-7 w-7 items-center justify-center rounded-md text-[#8b90a0] transition-colors hover:bg-[#272a32] hover:text-[#e0e2ed]">
                     <ZoomIn className="h-4 w-4" />
                   </button>
-                  <button className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white">
+                  <button className="flex h-7 w-7 items-center justify-center rounded-md text-[#8b90a0] transition-colors hover:bg-[#272a32] hover:text-[#e0e2ed]">
                     <ZoomOut className="h-4 w-4" />
                   </button>
-                  <button className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white">
+                  <button className="flex h-7 w-7 items-center justify-center rounded-md text-[#8b90a0] transition-colors hover:bg-[#272a32] hover:text-[#e0e2ed]">
                     <Crosshair className="h-4 w-4" />
                   </button>
                 </div>
@@ -456,18 +462,18 @@ export default function RepositoriesPage() {
               {/* Detected Services List */}
               <div className="glass-panel rounded-xl p-5">
                 <div className="mb-4 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-white">Detected Services</h4>
-                  <Badge variant="outline" className="border-zinc-700 text-xs text-zinc-400">
+                  <h4 className="text-base font-bold text-[#e0e2ed]">Detected Services</h4>
+                  <Badge variant="outline" className="border-[#414754] text-[10px] text-[#8b90a0] font-mono">
                     {importedRepos.length} REPOSITORIES
                   </Badge>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {importedRepos.length === 0 ? (
                     <div className="flex flex-col items-center py-12">
-                      <GitBranch className="mb-4 h-12 w-12 text-zinc-600" />
-                      <h3 className="mb-2 text-lg font-semibold text-white">No repositories connected</h3>
-                      <p className="mb-6 text-sm text-zinc-400">
+                      <GitBranch className="mb-4 h-12 w-12 text-[#414754]" />
+                      <h3 className="mb-2 text-lg font-semibold text-[#e0e2ed]">No repositories connected</h3>
+                      <p className="mb-6 text-sm text-[#8b90a0]">
                         Connect a GitHub repository to start analyzing your architecture
                       </p>
                       <Button
@@ -475,6 +481,7 @@ export default function RepositoriesPage() {
                           fetchGitHubRepos();
                           setConnectOpen(true);
                         }}
+                        className="bg-[#0070f3] hover:bg-[#0060d3]"
                       >
                         <Plus className="mr-2 h-4 w-4" />
                         Connect Repository
@@ -512,105 +519,108 @@ export default function RepositoriesPage() {
                         <div key={repo.id}>
                           {/* Progress bar */}
                           {isSyncing && progress && (
-                            <div className="mb-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+                            <div className="mb-3 rounded-lg border border-[#414754] bg-[#1c1f27]/50 p-4">
                               <div className="mb-2 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <StageIcon stage={progress.stage} />
-                                  <span className="text-xs font-medium text-zinc-300">
+                                  <span className="text-xs font-medium text-[#e0e2ed]">
                                     {STAGE_LABELS[progress.stage] || progress.stage}
                                   </span>
                                 </div>
-                                <span className="text-xs font-mono text-zinc-500">{progress.progress}%</span>
+                                <span className="text-xs font-mono text-[#8b90a0]">{progress.progress}%</span>
                               </div>
                               <Progress value={progress.progress} className="h-1.5" />
                             </div>
                           )}
 
-                          {/* Repo row */}
-                          <div className="group flex items-center gap-4 rounded-lg border border-zinc-800 p-4 transition-all hover:border-zinc-700 hover:bg-zinc-800/40">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 transition-transform group-hover:scale-110">
-                              <Server className="h-4 w-4 text-zinc-400" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-white">{repo.fullName}</span>
-                                {isSyncing ? (
-                                  <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-[10px] text-blue-400 animate-pulse">
-                                    Analyzing...
-                                  </Badge>
-                                ) : repo.lastSyncedAt ? (
-                                  <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-[10px] text-green-400">
-                                    Synced
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-400">
-                                    Pending
-                                  </Badge>
-                                )}
+                          {/* Service Card */}
+                          <div className="glass-panel group rounded-xl p-4 space-y-3 hover:border-[#0070f3]/30 transition-all">
+                            <div className="flex items-start gap-3">
+                              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#272a32] text-[#0070f3]">
+                                <Server className="h-5 w-5" />
                               </div>
-                              <p className="mt-0.5 truncate text-xs text-zinc-500">
-                                {repo.description || `Repository: ${repo.fullName}`}
-                              </p>
-                              {result && services.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                  {services.slice(0, 4).map((svc) => (
-                                    <Badge key={svc.name} variant="outline" className="border-zinc-700 text-[10px] text-zinc-400">
-                                      {svc.technology}: {svc.name}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <p className="text-sm font-bold text-[#e0e2ed] truncate">{repo.fullName}</p>
+                                  {isSyncing ? (
+                                    <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-[10px] text-blue-400 animate-pulse">
+                                      Analyzing...
                                     </Badge>
-                                  ))}
-                                  {services.length > 4 && (
-                                    <Badge variant="outline" className="border-zinc-700 text-[10px] text-zinc-400">
-                                      +{services.length - 4} more
+                                  ) : repo.lastSyncedAt ? (
+                                    <Badge variant="outline" className="border-green-500/30 bg-green-500/10 text-[10px] text-green-400">
+                                      Synced
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-400">
+                                      Pending
                                     </Badge>
                                   )}
                                 </div>
-                              )}
-                            </div>
-                            <div className="flex shrink-0 items-center gap-3">
+                                <p className="mt-0.5 text-xs text-[#8b90a0] leading-relaxed">
+                                  {repo.description || `Repository: ${repo.fullName}`}
+                                </p>
+                                {result && services.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {services.slice(0, 4).map((svc) => (
+                                      <Badge key={svc.name} variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7]">
+                                        {svc.technology}: {svc.name}
+                                      </Badge>
+                                    ))}
+                                    {services.length > 4 && (
+                                      <Badge variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7]">
+                                        +{services.length - 4} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleSync(repo.id)}
                                 disabled={isSyncing}
+                                className="text-[#8b90a0] hover:text-[#e0e2ed]"
                               >
                                 <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
                               </Button>
                             </div>
-                          </div>
 
-                          {/* Analysis result cards */}
-                          {result && !isSyncing && (
-                            <div className="mt-2 grid grid-cols-2 gap-2 pl-14">
-                              <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-3">
-                                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                                  <Server className="h-3 w-3" />
-                                  Services
+                            {/* Analysis result cards */}
+                            {result && !isSyncing && (
+                              <div className="border-t border-[#414754]/30 pt-3">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-3">
+                                    <div className="flex items-center gap-2 text-[10px] text-[#8b90a0]">
+                                      <Server className="h-3 w-3" />
+                                      Services
+                                    </div>
+                                    <p className="mt-1 text-sm font-bold text-[#e0e2ed] font-mono">{services.length}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-3">
+                                    <div className="flex items-center gap-2 text-[10px] text-[#8b90a0]">
+                                      <Globe className="h-3 w-3" />
+                                      APIs
+                                    </div>
+                                    <p className="mt-1 text-sm font-bold text-[#e0e2ed] font-mono">{apis.length}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-3">
+                                    <div className="flex items-center gap-2 text-[10px] text-[#8b90a0]">
+                                      <Database className="h-3 w-3" />
+                                      Databases
+                                    </div>
+                                    <p className="mt-1 text-sm font-bold text-[#e0e2ed] font-mono">{databases.length}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-3">
+                                    <div className="flex items-center gap-2 text-[10px] text-[#8b90a0]">
+                                      <Package className="h-3 w-3" />
+                                      Infra
+                                    </div>
+                                    <p className="mt-1 text-sm font-bold text-[#e0e2ed] font-mono">{infra.length}</p>
+                                  </div>
                                 </div>
-                                <p className="mt-1 text-sm font-semibold text-white">{services.length}</p>
                               </div>
-                              <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-3">
-                                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                                  <Globe className="h-3 w-3" />
-                                  APIs
-                                </div>
-                                <p className="mt-1 text-sm font-semibold text-white">{apis.length}</p>
-                              </div>
-                              <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-3">
-                                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                                  <Database className="h-3 w-3" />
-                                  Databases
-                                </div>
-                                <p className="mt-1 text-sm font-semibold text-white">{databases.length}</p>
-                              </div>
-                              <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-3">
-                                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                                  <Package className="h-3 w-3" />
-                                  Infra Resources
-                                </div>
-                                <p className="mt-1 text-sm font-semibold text-white">{infra.length}</p>
-                              </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       );
                     })
@@ -622,55 +632,76 @@ export default function RepositoriesPage() {
             {/* RIGHT COLUMN */}
             <div className="space-y-6 md:col-span-4">
               {/* AI Mentor Mode Card */}
-              <div className="glass-panel shimmer-ai relative overflow-hidden rounded-xl border-0 p-5">
-                <div className="relative z-10">
-                  <div className="mb-3 flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-blue-600">
-                      <GitMerge className="h-4 w-4 text-white" />
-                    </div>
-                    <h4 className="text-sm font-semibold text-white">AI Mentor Mode</h4>
+              <div className="glass-panel rounded-xl overflow-hidden hover:border-[#0070f3]/20">
+                <div
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[#414754]/50"
+                  onClick={() => setMentorExpanded(!mentorExpanded)}
+                >
+                  <div className="w-8 h-8 rounded-full bg-[#0070f3]/20 flex items-center justify-center">
+                    <Lightbulb className="w-4 h-4 text-[#0070f3]" />
                   </div>
+                  <h3 className="text-sm font-bold text-[#e0e2ed] flex-1">AI Mentor Mode</h3>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className={`w-4 h-4 text-[#8b90a0] transition-transform ${mentorExpanded ? "rotate-180" : ""}`}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </div>
 
-                  <div className="mb-3">
-                    <p className="mb-1 text-xs font-medium text-zinc-400">Architecture Insights</p>
+                {mentorExpanded && (
+                  <div className="p-4 space-y-4">
                     {importedRepos.length > 0 ? (
-                      <p className="text-sm leading-relaxed text-zinc-300">
-                        {importedRepos.length} repositor{importedRepos.length > 1 ? "ies" : "y"} connected.
-                        {importedRepos.some((r) => getResult(r.id))
-                          ? " Analysis available for reviewed repositories."
-                          : " Sync a repository to get detailed architecture insights."}
-                      </p>
+                      <>
+                        <div>
+                          <p className="text-[10px] font-semibold text-[#8b90a0] uppercase tracking-wider mb-2">Architecture Insights</p>
+                          <blockquote className="text-sm text-[#c1c6d7] leading-relaxed border-l-2 border-[#0070f3] pl-3 italic">
+                            &quot;The{' '}
+                            <span className="text-[#e0e2ed] not-italic font-semibold">Ingress Controller</span> is like a{' '}
+                            <span className="text-[#0070f3] not-italic font-semibold">Security Gate</span> at a private community. It checks your credentials (certs) and tells you which house (service) you&apos;re allowed to visit.&quot;
+                          </blockquote>
+                        </div>
+
+                        <div className="flex items-start gap-2 p-3 rounded-lg bg-[#0070f3]/5 border border-[#0070f3]/10">
+                          <div className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-400">
+                            <Lightbulb className="w-4 h-4" />
+                          </div>
+                          <p className="text-xs text-[#c1c6d7] leading-relaxed">
+                            {importedRepos.length} repositor{importedRepos.length > 1 ? "ies" : "y"} connected.
+                            {importedRepos.some((r) => getResult(r.id))
+                              ? " Analysis available for reviewed repositories."
+                              : " Sync a repository to get detailed architecture insights."}
+                          </p>
+                        </div>
+                      </>
                     ) : (
-                      <p className="text-sm leading-relaxed text-zinc-300">
+                      <p className="text-sm text-[#c1c6d7]">
                         Connect a repository to get AI-powered architecture analysis and insights.
                       </p>
                     )}
-                  </div>
 
-                  <div className="mb-4 flex items-start gap-2 rounded-lg bg-blue-500/10 p-3">
-                    <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-                    <p className="text-xs leading-relaxed text-zinc-300">
-                      Import a repository with Docker or Kubernetes configs to see infrastructure analysis.
-                    </p>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full bg-[#0070f3]/10 text-[#0070f3] hover:bg-[#0070f3]/20 border border-[#0070f3]/20"
+                      onClick={() => {
+                        fetchGitHubRepos();
+                        setConnectOpen(true);
+                      }}
+                    >
+                      <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                      Ask Mentor a question
+                    </Button>
                   </div>
-
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      fetchGitHubRepos();
-                      setConnectOpen(true);
-                    }}
-                  >
-                    Ask Mentor a question
-                  </Button>
-                </div>
+                )}
               </div>
 
               {/* API Relationship Map */}
               <div className="glass-panel rounded-xl p-5">
-                <h4 className="mb-4 text-sm font-semibold text-white">API Relationship Map</h4>
+                <h4 className="text-base font-bold text-[#e0e2ed] mb-4">API Relationship Map</h4>
                 {importedRepos.length > 0 ? (
                   (() => {
                     const allApis = importedRepos
@@ -688,61 +719,61 @@ export default function RepositoriesPage() {
 
                     return (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-zinc-400">REST Endpoints</span>
-                          <span className="text-sm font-semibold text-white">{restCount || 0}</span>
+                        <div className="flex items-center justify-between py-2 border-b border-[#414754]/30">
+                          <span className="text-sm text-[#c1c6d7]">REST Endpoints</span>
+                          <span className="text-sm text-[#e0e2ed] font-bold font-mono">{restCount || 0}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-zinc-400">GraphQL Resolvers</span>
-                          <span className="text-sm font-semibold text-white">{graphqlCount || 0}</span>
+                        <div className="flex items-center justify-between py-2 border-b border-[#414754]/30">
+                          <span className="text-sm text-[#c1c6d7]">GraphQL Resolvers</span>
+                          <span className="text-sm text-[#e0e2ed] font-bold font-mono">{graphqlCount || 0}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-zinc-400">WebSocket</span>
-                          <span className="text-sm font-semibold text-white">{wsCount || 0}</span>
+                        <div className="flex items-center justify-between py-2 border-b border-[#414754]/30">
+                          <span className="text-sm text-[#c1c6d7]">WebSocket</span>
+                          <span className="text-sm text-[#e0e2ed] font-bold font-mono">{wsCount || 0}</span>
                         </div>
                         {dbTypes.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 pt-1">
                             {dbTypes.map((t) => (
-                              <Badge key={t} variant="outline" className="border-zinc-700 text-[10px] text-zinc-400">
+                              <Badge key={t} variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7]">
                                 {t}
                               </Badge>
                             ))}
                           </div>
                         )}
                         <div className="pt-2">
-                          <div className="mb-1 flex items-center justify-between">
-                            <span className="text-xs text-zinc-400">System Health</span>
-                            <span className="text-xs font-semibold text-green-400">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-[#c1c6d7]">System Health</span>
+                            <span className="text-sm text-green-400 font-bold font-mono">
                               {importedRepos.some((r) => getResult(r.id)) ? "Active" : "N/A"}
                             </span>
                           </div>
-                          <Progress
-                            value={importedRepos.some((r) => getResult(r.id)) ? 100 : 0}
-                            className="h-2"
-                          />
+                          <div className="h-2 bg-[#414754]/40 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-green-400 transition-all"
+                              style={{ width: importedRepos.some((r) => getResult(r.id)) ? "100%" : "0%" }}
+                            />
+                          </div>
                         </div>
                       </div>
                     );
                   })()
                 ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-zinc-500">No data yet. Import a repository to see API relationships.</p>
-                  </div>
+                  <p className="text-sm text-[#8b90a0]">No data yet. Import a repository to see API relationships.</p>
                 )}
               </div>
 
-              {/* Stats / Documents */}
+              {/* Generated Documents */}
               {importedRepos.some((r) => getResult(r.id)) && (
                 <div className="glass-panel rounded-xl p-5">
-                  <h4 className="mb-3 text-sm font-semibold text-white">Generated Documents</h4>
+                  <h4 className="text-base font-bold text-[#e0e2ed] mb-4">Generated Documents</h4>
                   <div className="space-y-2">
                     {importedRepos.map((repo) => {
                       const result = getResult(repo.id);
                       if (!result) return null;
                       return result.documents.slice(0, 3).map((doc) => (
-                        <div key={doc.id} className="rounded-lg border border-zinc-800 p-3">
-                          <p className="text-xs font-medium text-zinc-300 truncate">{doc.title}</p>
-                          <p className="mt-1 text-[10px] text-zinc-500">
+                        <div key={doc.id} className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-3">
+                          <p className="text-xs font-medium text-[#e0e2ed] truncate">{doc.title}</p>
+                          <p className="mt-1 text-[10px] text-[#8b90a0]">
                             {doc.content ? `${doc.content.substring(0, 100)}...` : "No content"}
                           </p>
                         </div>
@@ -756,17 +787,17 @@ export default function RepositoriesPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-8 border-t border-zinc-800 pt-6">
+        <div className="border-t border-[#414754]/50 pt-6">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <span className="font-semibold text-zinc-400">ARCHON</span>
-              <span>&copy; {new Date().getFullYear()} Archon Labs</span>
+            <div className="flex items-center gap-2 text-xs text-[#8b90a0]">
+              <span className="font-bold text-[#e0e2ed]">ARCHON</span>
+              <span>&copy; {new Date().getFullYear()} Archon Systems. All rights reserved.</span>
             </div>
-            <div className="flex items-center gap-4 text-xs text-zinc-500">
-              <a href="#" className="transition-colors hover:text-zinc-300">Documentation</a>
-              <a href="#" className="transition-colors hover:text-zinc-300">API Reference</a>
-              <a href="#" className="transition-colors hover:text-zinc-300">Status</a>
-              <a href="#" className="transition-colors hover:text-zinc-300">Security</a>
+            <div className="flex items-center gap-4 text-xs text-[#8b90a0]">
+              <a href="#" className="transition-colors hover:text-[#0070f3]">Documentation</a>
+              <a href="#" className="transition-colors hover:text-[#0070f3]">API Reference</a>
+              <a href="#" className="transition-colors hover:text-[#0070f3]">Status</a>
+              <a href="#" className="transition-colors hover:text-[#0070f3]">Security</a>
             </div>
           </div>
         </div>
@@ -774,7 +805,8 @@ export default function RepositoriesPage() {
 
       {/* FAB */}
       <button
-        className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary-container text-primary-foreground shadow-lg transition-transform hover:scale-110"
+        className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#0070f3] text-white shadow-lg hover:bg-[#0060d3] transition-all active:scale-95"
+        style={{ boxShadow: "0 0 20px rgba(0,112,243,0.4)" }}
         onClick={() => {
           fetchGitHubRepos();
           setConnectOpen(true);
@@ -785,18 +817,18 @@ export default function RepositoriesPage() {
 
       {/* Import Dialog */}
       <Dialog open={connectOpen} onOpenChange={setConnectOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg bg-[#10131b] border-[#414754] text-[#e0e2ed]">
           <DialogHeader>
             <DialogTitle>Connect Repository</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-[#8b90a0]">
               Import a GitHub repository for real architecture analysis
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300">Project</label>
+              <label className="text-sm font-medium text-[#c1c6d7]">Project</label>
               <Select value={selectedProject || ""} onValueChange={setSelectedProject}>
-                <SelectTrigger>
+                <SelectTrigger className="border-[#414754] bg-[#1c1f27] text-[#e0e2ed]">
                   <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
                 <SelectContent>
@@ -809,9 +841,9 @@ export default function RepositoriesPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300">Repository</label>
+              <label className="text-sm font-medium text-[#c1c6d7]">Repository</label>
               <Select value={selectedRepo || ""} onValueChange={setSelectedRepo}>
-                <SelectTrigger>
+                <SelectTrigger className="border-[#414754] bg-[#1c1f27] text-[#e0e2ed]">
                   <SelectValue placeholder={gitHubRepos.length > 0 ? "Select a repository" : "Loading repositories..."} />
                 </SelectTrigger>
                 <SelectContent>
@@ -824,26 +856,27 @@ export default function RepositoriesPage() {
               </Select>
             </div>
             {selectedRepo && (
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-                <p className="text-xs text-zinc-400">
+              <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/50 p-3">
+                <p className="text-xs text-[#8b90a0]">
                   This will clone the repository and run a full static analysis to detect services, APIs, databases,
                   infrastructure, and generate architecture diagrams and documentation.
                 </p>
               </div>
             )}
             {gitHubRepos.length === 0 && (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300">
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-400">
                 No repositories found. Make sure your GitHub account has repositories and you&apos;re signed in with GitHub.
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConnectOpen(false)}>
+            <Button variant="outline" onClick={() => setConnectOpen(false)} className="border-[#414754] text-[#e0e2ed] hover:bg-[#272a32]">
               Cancel
             </Button>
             <Button
               onClick={handleImport}
               disabled={!selectedRepo || !selectedProject || importing}
+              className="bg-[#0070f3] hover:bg-[#0060d3] text-white"
             >
               {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Import Repository

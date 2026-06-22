@@ -136,7 +136,7 @@ function parseJavaScript(content: string): AstInfo | null {
     if (!node || typeof node !== "object") return;
 
     if (node.type === "ImportDeclaration") {
-      info.imports.push(node.source as string);
+      info.imports.push((node.source as Record<string, unknown>).value as string);
     }
     if (node.type === "ExportNamedDeclaration" && node.declaration) {
       const decl = node.declaration as Record<string, unknown>;

@@ -50,6 +50,8 @@ export async function GET(
         }
       };
 
+      const unsubscribe = subscribeToAnalysis(repositoryId, sendProgress);
+
       prisma.analysis
         .findUnique({ where: { repositoryId } })
         .then((analysis) => {
@@ -63,18 +65,18 @@ export async function GET(
             });
 
             if (analysis.status === "COMPLETED" || analysis.status === "FAILED") {
-              return;
+              unsubscribe();
             }
           }
-
-          const unsubscribe = subscribeToAnalysis(repositoryId, sendProgress);
-          req.signal.addEventListener("abort", () => {
-            unsubscribe();
-          });
         })
         .catch(() => {
+          unsubscribe();
           controller.close();
         });
+
+      req.signal.addEventListener("abort", () => {
+        unsubscribe();
+      });
     },
   });
 

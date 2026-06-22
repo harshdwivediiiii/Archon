@@ -36,11 +36,13 @@ export async function runAnalysis(
           ? "ANALYZING"
           : stage === "graph"
             ? "BUILDING_GRAPH"
-            : stage === "diagrams"
-              ? "GENERATING_DIAGRAMS"
-              : stage === "docs"
-                ? "GENERATING_DOCS"
-                : "COMPLETED";
+            : stage === "ai_analysis"
+              ? "AI_ANALYSIS"
+              : stage === "diagrams"
+                ? "GENERATING_DIAGRAMS"
+                : stage === "docs"
+                  ? "GENERATING_DOCS"
+                  : "COMPLETED";
 
     await prisma.analysis.update({
       where: { repositoryId },
@@ -179,12 +181,12 @@ export async function runAnalysis(
     await updateProgress("graph", 65);
     const graph = buildGraph(result);
 
-    const workspace = await prisma.repository.findUnique({
+    const repoInfo = await prisma.repository.findUnique({
       where: { id: repositoryId },
-      select: { project: { select: { workspaceId: true } } },
+      select: { projectId: true, project: { select: { workspaceId: true } } },
     });
 
-    if (workspace) {
+    if (repoInfo) {
       for (const node of graph.nodes) {
         await prisma.knowledgeNode.upsert({
           where: { id: node.id },
@@ -200,7 +202,7 @@ export async function runAnalysis(
             type: node.type,
             description: node.description,
             metadata: JSON.parse(JSON.stringify(node.properties)),
-            workspaceId: workspace.project.workspaceId,
+            workspaceId: repoInfo.project.workspaceId,
           },
         });
       }
@@ -236,6 +238,16 @@ export async function runAnalysis(
     await updateProgress("diagrams", 80);
     const diagram = generateReactFlowDiagram(result, graph);
 
+    // Remove old diagrams to prevent duplicate accumulation
+    await prisma.diagram.deleteMany({
+      where: {
+        OR: [
+          ...(repoInfo?.projectId ? [{ projectId: repoInfo.projectId }] : []),
+          { metadata: { path: ["repositoryId"], equals: repositoryId } },
+        ],
+      },
+    });
+
     await prisma.diagram.create({
       data: {
         name: `${fullName} - Architecture Diagram`,
@@ -243,6 +255,7 @@ export async function runAnalysis(
         nodes: JSON.parse(JSON.stringify(diagram.nodes)),
         edges: JSON.parse(JSON.stringify(diagram.edges)),
         metadata: { repositoryId, source: "analysis" },
+        projectId: repoInfo?.projectId,
       },
     });
 
