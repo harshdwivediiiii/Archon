@@ -12,7 +12,8 @@ export async function GET() {
   const callbackUrls = getCallbackUrls();
 
   const configHealth = {
-    trustHost: authConfig.trustHost ?? false,
+    trustHost: !!process.env.AUTH_URL || !!process.env.NEXTAUTH_URL || !!process.env.VERCEL_URL,
+    vercelUrl: process.env.VERCEL_URL ?? null,
     pages: authConfig.pages,
     sessionStrategy: "database",
     hasCustomCallbacks: {

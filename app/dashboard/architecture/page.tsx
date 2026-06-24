@@ -8,10 +8,7 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
-  MarkerType,
   BackgroundVariant,
-  type Node,
-  type Edge,
   type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -20,9 +17,9 @@ import {
   Server, Loader2, Search, RefreshCw, Play, CheckCircle2, XCircle, AlertCircle,
   Lightbulb, Network, Layers, BarChart3, FileText, Sparkles, History, Database,
   Package, Globe, Box, Code2, ExternalLink, Eye, ZoomIn, ZoomOut, Maximize, Minimize,
-  Expand, Shrink, Info, SlidersHorizontal, ChevronDown, ChevronRight, GitFork,
-  Activity, Shield, Gauge, Bot, Clock, Camera, Download, Upload, GitBranch,
-  Tag, Bookmark, Lock, Key, UserCheck, ArrowLeftRight, Route, FileSearch,
+  Expand, Shrink, SlidersHorizontal, ChevronDown, ChevronRight, GitFork,
+  Activity, Shield, Bot, Clock, Camera, GitBranch,
+  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -33,7 +30,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getTechIcon } from "@/lib/analysis/tech-icons";
 import type {
   DetectedService, DetectedApi, DetectedDatabase, DetectedInfrastructure, DetectedModule,
   DetectedEvent, AiAnalysisData, ArchitectureSnapshot, SecurityFinding,
@@ -42,9 +38,13 @@ import { ThreeBackground } from "./components/three-background";
 import { computeDagreLayout, computeLayerLayout } from "./utils/layout-engine";
 import {
   DIAGRAM_MODES, transformSystemView, transformUmlView, transformInfrastructureView,
-  transformDataFlowView, transformDependencyView, transformSecurityView, transformTimelineView,
-  LAYER_ORDER, NODE_COLORS, type DiagramMode, type ModeNode, type ModeEdge,
+  transformDataFlowView, transformEventFlowView, transformSearchView,
+  transformMlPipelineView, transformDependencyView, transformSecurityView, transformTimelineView,
+  LAYER_ORDER, type DiagramMode, type ModeNode, type ModeEdge,
 } from "./utils/mode-transformers";
+import { nodeTypes } from "@/components/architecture/nodes";
+import { edgeTypes } from "@/components/architecture/edges";
+import { getTechIcon } from "@/lib/analysis/tech-icons";
 
 interface ImportedRepo {
   id: string; fullName: string; name?: string; defaultBranch?: string; lastSyncedAt?: string;
@@ -55,7 +55,8 @@ interface AnalysisProgress {
 }
 
 const MODE_ICONS: Record<string, React.ElementType> = {
-  system: Network, uml: Code2, infrastructure: Box, dataflow: GitFork, dependencies: Package,
+  system: Layers, uml: Code2, infrastructure: Box, dataflow: GitFork,
+  eventflow: Activity, search: Search, ml: Bot, dependencies: Package,
   security: Shield, timeline: History,
 };
 
@@ -72,133 +73,22 @@ const LIVE_STEPS = [
   { key: "docs", label: "Documentation Generated" },
 ];
 
-const STATUS_COLORS: Record<string, string> = {
-  healthy: "#22c55e", warning: "#f59e0b", error: "#ef4444", unknown: "#6b7280",
-};
-
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "#ef4444", HIGH: "#f59e0b", MEDIUM: "#3b82f6", LOW: "#6b7280", INFO: "#8b90a0",
 };
 
-function computeStatus(data: ModeNode["data"]): { status: "healthy" | "warning" | "error" | "unknown"; label: string } {
-  if (data.risk === "circular dependency") return { status: "error", label: "circular" };
-  if (data.severity === "HIGH" || data.severity === "CRITICAL") return { status: "error", label: "critical" };
-  if (data.dependencyCount > 20) return { status: "warning", label: "complex" };
-  if (data.health?.score !== undefined && data.health.score < 50) return { status: "error", label: "unhealthy" };
-  if (data.dependencyCount === 0 && data.nodeType !== "frontend" && data.nodeType !== "library") return { status: "warning", label: "isolated" };
-  return { status: "healthy", label: "stable" };
-}
-
-function TechIconDisplay({ technology, nodeType, size = 18 }: { technology?: string; nodeType: string; size?: number }) {
+function TechIconDisplay({ technology, size = 18 }: { technology?: string; size?: number }) {
   const Component = technology ? getTechIcon(technology) : Server;
-  const color = NODE_COLORS[nodeType] || "#6b7280";
   return (
-    <div className="flex items-center justify-center rounded-lg" style={{ backgroundColor: `${color}20`, width: size + 8, height: size + 8 }}>
+    <div className="flex items-center justify-center rounded-lg" style={{ width: size + 8, height: size + 8 }}>
       {React.createElement(Component, { size, className: "text-white" })}
     </div>
   );
 }
 
-function EnhancedNode({ data, selected }: { data: ModeNode["data"]; selected?: boolean }) {
-  const color = NODE_COLORS[data.nodeType] || "#6b7280";
-  const { status, label: statusLabel } = computeStatus(data);
-  const metrics = data.metrics || [];
-  const isSecurity = data.nodeType === "security" || data.severity;
-  const isTimeline = data.nodeType === "timeline_node";
-  return (
-    <div
-      className={`rounded-xl px-4 py-3 shadow-lg backdrop-blur-md transition-all min-w-[210px] ${
-        selected ? "ring-2 ring-[#0070f3] ring-offset-2 ring-offset-[#10131b]" : ""
-      } ${isSecurity ? "border-l-4" : ""}`}
-      style={{
-        background: isSecurity && data.severity === "CRITICAL" ? "rgba(239, 68, 68, 0.08)" :
-                     isSecurity && data.severity === "HIGH" ? "rgba(245, 158, 11, 0.08)" :
-                     "rgba(16, 19, 27, 0.92)",
-        border: `1.5px solid ${isSecurity && data.severity ? SEVERITY_COLORS[data.severity] || color : color}${selected ? "cc" : "40"}`,
-        borderLeftColor: isSecurity && data.severity ? SEVERITY_COLORS[data.severity] || color : undefined,
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <div className="relative">
-          <TechIconDisplay technology={data.technologyIcon} nodeType={data.nodeType} />
-          <span
-            className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#10131b]"
-            style={{ backgroundColor: STATUS_COLORS[status] }}
-            title={statusLabel}
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-[#e0e2ed]">{data.label}</p>
-          {data.technology && (
-            <p className="truncate text-[11px] text-[#8b90a0]">{data.technology}</p>
-          )}
-        </div>
-      </div>
-      <p className="mt-1.5 text-[11px] leading-relaxed text-[#8b90a0] line-clamp-2">
-        {data.description}
-      </p>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <Badge variant="outline" className="border-[#414754] text-[10px] text-[#8b90a0] px-1.5 py-0 flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[status] }} />
-          {data.severity || data.nodeType}
-        </Badge>
-        {data.dependencyCount > 0 && (
-          <Badge variant="outline" className="border-[#414754]/50 text-[10px] text-[#06b6d4]">
-            {data.dependencyCount} deps
-          </Badge>
-        )}
-        {data.endpoints && data.endpoints.length > 0 && (
-          <Badge variant="outline" className="border-[#10b981]/30 text-[10px] text-[#10b981]">
-            {data.endpoints.length} API
-          </Badge>
-        )}
-        {data.databases && data.databases.length > 0 && (
-          <Badge variant="outline" className="border-[#f59e0b]/30 text-[10px] text-[#f59e0b]">
-            {data.databases.length} db
-          </Badge>
-        )}
-        {data.risk && (
-          <Badge variant="outline" className="border-[#ef4444]/30 text-[10px] text-[#ef4444]">
-            {data.risk}
-          </Badge>
-        )}
-        {data.port && (
-          <span className="text-[10px] font-mono text-[#8b90a0]">:{data.port}</span>
-        )}
-      </div>
-      {metrics.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-[#414754]/30 flex gap-2">
-          {metrics.map((m) => (
-            <div key={m.label} className="flex items-center gap-1">
-              <span className="text-[9px] text-[#8b90a0]">{m.label}</span>
-              <span className="text-[10px] font-semibold" style={{ color: m.color }}>{m.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const nodeTypes = { custom: EnhancedNode, default: EnhancedNode };
-
-interface InspectorData {
-  id: string; label: string; type: string; technology: string; description: string; layer: string;
-  filePath?: string; functions?: string[]; classes?: string[]; interfaces?: string[];
-  dependencies?: string[]; dependents?: string[]; endpoints?: string[]; databases?: string[];
-  envVars?: string[]; port?: number; status?: string; health?: { score: number; issues: string[] };
-  deploymentConfig?: string; repoReferences?: string[];
-  methods?: { name: string; params: string; returnType: string; visibility: string }[];
-  properties?: { name: string; type: string; visibility: string }[];
-  extends?: string; implements?: string[]; serviceData?: DetectedService;
-  severity?: string; risk?: string; recommendation?: string; category?: string;
-  eventType?: string; timestamp?: string; group?: string; environment?: string;
-  version?: string; confidence?: number;
-}
-
 function InfoChip({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="rounded-lg border border-[#414754] bg-[#1c1f27] p-2.5">
+    <div className="rounded-lg border border-[#2a2d35] bg-[#12141a] p-2.5">
       <p className="text-[9px] text-[#8b90a0] uppercase tracking-wider">{label}</p>
       <p className="text-xs font-semibold mt-0.5 truncate" style={{ color }}>{value}</p>
     </div>
@@ -213,12 +103,15 @@ function DeepInspectorPanel({
 }) {
   const [activeTab, setActiveTab] = useState<"details" | "ai">("details");
   if (!data) return null;
-  const color = NODE_COLORS[data.type] || "#6b7280";
   return (
-    <aside className="w-80 shrink-0 glass-panel rounded-xl overflow-hidden flex flex-col">
-      <div className="p-4 border-b border-[#414754]/50 flex items-center justify-between">
+    <aside className="w-80 shrink-0 rounded-xl overflow-hidden flex flex-col" style={{
+      background: "rgba(10,10,10,0.85)",
+      backdropFilter: "blur(20px)",
+      border: "1px solid rgba(42,45,53,0.4)",
+    }}>
+      <div className="p-4 border-b border-[#2a2d35]/50 flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
-          <TechIconDisplay technology={data.technology} nodeType={data.type} size={16} />
+          <TechIconDisplay technology={data.technology} size={16} />
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-[#e0e2ed] truncate">{data.label}</h3>
             <p className="text-[10px] text-[#8b90a0] truncate">{data.technology || data.type}</p>
@@ -226,7 +119,7 @@ function DeepInspectorPanel({
         </div>
         <button onClick={onClose} className="text-[#8b90a0] hover:text-[#e0e2ed] text-lg leading-none">&times;</button>
       </div>
-      <div className="flex border-b border-[#414754]/50">
+      <div className="flex border-b border-[#2a2d35]/50">
         <button
           onClick={() => setActiveTab("details")}
           className={`flex-1 py-2 text-[11px] font-medium transition-colors ${activeTab === "details" ? "text-[#0070f3] border-b-2 border-[#0070f3]" : "text-[#8b90a0] hover:text-[#e0e2ed]"}`}
@@ -244,21 +137,19 @@ function DeepInspectorPanel({
         {activeTab === "details" ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
-              <InfoChip label="Type" value={data.type} color={color} />
-              <InfoChip label="Layer" value={data.layer} color={color} />
-              {data.port && <InfoChip label="Port" value={`:${data.port}`} color={color} />}
-              {data.severity && <InfoChip label="Severity" value={data.severity} color={SEVERITY_COLORS[data.severity] || color} />}
-              {data.confidence !== undefined && <InfoChip label="Confidence" value={`${data.confidence}%`} color={color} />}
-              {data.health?.score !== undefined && <InfoChip label="Health" value={`${data.health.score}%`} color={color} />}
+              <InfoChip label="Type" value={data.type} color={data.type ? "#3b82f6" : "#6b7280"} />
+              <InfoChip label="Layer" value={data.layer} color="#8b90a0" />
+              {data.port && <InfoChip label="Port" value={`:${data.port}`} color="#8b90a0" />}
+              {data.severity && <InfoChip label="Severity" value={data.severity} color={SEVERITY_COLORS[data.severity] || "#6b7280"} />}
+              {data.confidence !== undefined && <InfoChip label="Confidence" value={`${data.confidence}%`} color="#8b90a0" />}
+              {data.health?.score !== undefined && <InfoChip label="Health" value={`${data.health.score}%`} color={data.health.score > 70 ? "#22c55e" : "#f59e0b"} />}
             </div>
-
             {data.description && (
               <div>
                 <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1">Description</p>
                 <p className="text-xs text-[#c1c6d7] leading-relaxed">{data.description}</p>
               </div>
             )}
-
             {data.risk && (
               <div className="rounded-lg border border-[#ef4444]/30 bg-[#ef4444]/5 p-3">
                 <p className="text-[10px] text-[#ef4444] uppercase tracking-wider font-semibold mb-1">Risk</p>
@@ -271,61 +162,28 @@ function DeepInspectorPanel({
                 )}
               </div>
             )}
-
             {data.filePath && (
               <div>
                 <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1">Source Files</p>
-                <p className="text-xs font-mono text-[#c1c6d7] bg-[#1c1f27] rounded p-2 truncate border border-[#414754]">
-                  {data.filePath}
-                </p>
+                <p className="text-xs font-mono text-[#c1c6d7] bg-[#12141a] rounded p-2 truncate border border-[#2a2d35]">{data.filePath}</p>
               </div>
             )}
-
-            {data.status && (
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[data.status] || "#6b7280" }} />
-                <span className="text-[11px] text-[#8b90a0] font-medium capitalize">{data.status}</span>
-                {data.health && (
-                  <span className="text-[10px] text-[#8b90a0] font-mono">score: {data.health.score}/100</span>
-                )}
-              </div>
-            )}
-
-            {data.timestamp && (
-              <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1">Timestamp</p>
-                <p className="text-xs font-mono text-[#c1c6d7]">{new Date(data.timestamp).toLocaleString()}</p>
-              </div>
-            )}
-
             {data.dependencies && data.dependencies.length > 0 && (
               <div>
                 <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Dependencies ({data.dependencies.length})</p>
                 <div className="flex flex-wrap gap-1">
                   {data.dependencies.map((d) => (
-                    <Badge key={d} variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7]">{d}</Badge>
+                    <Badge key={d} variant="outline" className="border-[#2a2d35] text-[10px] text-[#c1c6d7]">{d}</Badge>
                   ))}
                 </div>
               </div>
             )}
-
-            {data.envVars && data.envVars.length > 0 && (
-              <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Environment Variables</p>
-                <div className="flex flex-wrap gap-1">
-                  {data.envVars.map((env) => (
-                    <Badge key={env} variant="outline" className="border-[#414754] text-[10px] text-[#c1c6d7] font-mono">{env}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {data.endpoints && data.endpoints.length > 0 && (
               <div>
                 <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Endpoints ({data.endpoints.length})</p>
                 <div className="space-y-1">
                   {data.endpoints.slice(0, 8).map((ep) => (
-                    <div key={ep} className="flex items-center gap-1.5 text-[11px] font-mono text-[#c1c6d7] bg-[#1c1f27] rounded px-2 py-1 border border-[#414754]/50">
+                    <div key={ep} className="flex items-center gap-1.5 text-[11px] font-mono text-[#c1c6d7] bg-[#12141a] rounded px-2 py-1 border border-[#2a2d35]/50">
                       <Globe className="w-3 h-3 text-[#06b6d4]" />
                       {ep}
                     </div>
@@ -333,22 +191,6 @@ function DeepInspectorPanel({
                 </div>
               </div>
             )}
-
-            {data.methods && data.methods.length > 0 && (
-              <div>
-                <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Methods ({data.methods.length})</p>
-                <div className="space-y-1">
-                  {data.methods.slice(0, 8).map((m) => (
-                    <div key={m.name} className="flex items-center gap-1.5 text-[11px] font-mono text-[#c1c6d7] bg-[#1c1f27] rounded px-2 py-1 border border-[#414754]/50">
-                      <span className="text-[10px] text-[#8b90a0]">{m.visibility === "public" ? "+" : m.visibility === "private" ? "-" : "#"}</span>
-                      <span className="text-[#e0e2ed]">{m.name}</span>
-                      <span className="text-[#8b90a0]">({m.params}): {m.returnType}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <button
               onClick={() => onViewInKnowledgeGraph(data.id)}
               className="w-full bg-[#0070f3]/10 hover:bg-[#0070f3]/20 border border-[#0070f3]/20 text-[#0070f3] py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2"
@@ -373,7 +215,7 @@ function DeepInspectorPanel({
                 <p className="text-[10px] text-[#8b90a0] uppercase tracking-wider font-semibold mb-1.5">Health Issues</p>
                 <div className="space-y-1">
                   {data.health.issues.map((issue, i) => (
-                    <div key={i} className="flex items-start gap-2 text-[11px] text-[#c1c6d7] bg-[#1c1f27] rounded p-2 border border-[#f59e0b]/20">
+                    <div key={i} className="flex items-start gap-2 text-[11px] text-[#c1c6d7] bg-[#12141a] rounded p-2 border border-[#f59e0b]/20">
                       <AlertCircle className="w-3 h-3 text-[#f59e0b] mt-0.5 shrink-0" />
                       <span>{issue}</span>
                     </div>
@@ -398,16 +240,34 @@ function ContextMenu({ x, y, nodeId, label, onClose, onInspect, onViewInKnowledg
     return () => document.removeEventListener("click", handler);
   }, [onClose]);
   return (
-    <div className="fixed z-[1000] min-w-[180px] glass-panel rounded-xl border border-[#414754] shadow-2xl py-1.5" style={{ left: x, top: y }}>
-      <p className="px-3 py-1.5 text-[11px] text-[#8b90a0] font-medium border-b border-[#414754]/50 truncate">{label}</p>
-      <button onClick={() => { onInspect(); onClose(); }} className="w-full px-3 py-2 text-xs text-[#e0e2ed] hover:bg-[#272a32] flex items-center gap-2 text-left transition-colors">
+    <div className="fixed z-[1000] min-w-[180px] rounded-xl border border-[#2a2d35] shadow-2xl py-1.5" style={{
+      left: x, top: y,
+      background: "rgba(10,10,10,0.95)",
+      backdropFilter: "blur(20px)",
+    }}>
+      <p className="px-3 py-1.5 text-[11px] text-[#8b90a0] font-medium border-b border-[#2a2d35]/50 truncate">{label}</p>
+      <button onClick={() => { onInspect(); onClose(); }} className="w-full px-3 py-2 text-xs text-[#e0e2ed] hover:bg-[#1a1d24] flex items-center gap-2 text-left transition-colors">
         <Eye className="w-3.5 h-3.5 text-[#0070f3]" /> Inspect Node
       </button>
-      <button onClick={() => { onViewInKnowledgeGraph(nodeId); onClose(); }} className="w-full px-3 py-2 text-xs text-[#e0e2ed] hover:bg-[#272a32] flex items-center gap-2 text-left transition-colors">
+      <button onClick={() => { onViewInKnowledgeGraph(nodeId); onClose(); }} className="w-full px-3 py-2 text-xs text-[#e0e2ed] hover:bg-[#1a1d24] flex items-center gap-2 text-left transition-colors">
         <ExternalLink className="w-3.5 h-3.5 text-[#8b5cf6]" /> View in Knowledge Graph
       </button>
     </div>
   );
+}
+
+interface InspectorData {
+  id: string; label: string; type: string; technology: string; description: string; layer: string;
+  filePath?: string; functions?: string[]; classes?: string[]; interfaces?: string[];
+  dependencies?: string[]; dependents?: string[]; endpoints?: string[]; databases?: string[];
+  envVars?: string[]; port?: number; status?: string; health?: { score: number; issues: string[] };
+  deploymentConfig?: string; repoReferences?: string[];
+  methods?: { name: string; params: string; returnType: string; visibility: string }[];
+  properties?: { name: string; type: string; visibility: string }[];
+  extends?: string; implements?: string[]; serviceData?: DetectedService;
+  severity?: string; risk?: string; recommendation?: string; category?: string;
+  eventType?: string; timestamp?: string; group?: string; environment?: string;
+  version?: string; confidence?: number;
 }
 
 export default function ArchitecturePage() {
@@ -445,7 +305,6 @@ export default function ArchitecturePage() {
   const fitView = useCallback((opts?: { padding?: number; duration?: number; nodes?: { id: string }[] }) =>
     rfInstance.current?.fitView(opts), []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "f" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); fitView({ padding: 0.3 }); }
@@ -473,7 +332,6 @@ export default function ArchitecturePage() {
     })();
   }, []);
 
-  // Fetch analysis results
   useEffect(() => {
     if (!selectedRepoId) return;
     let cancelled = false;
@@ -495,7 +353,6 @@ export default function ArchitecturePage() {
     return () => { cancelled = true; };
   }, [selectedRepoId]);
 
-  // Fetch snapshots
   useEffect(() => {
     if (!selectedRepoId || !analysisExists) return;
     (async () => {
@@ -506,7 +363,6 @@ export default function ArchitecturePage() {
     })();
   }, [selectedRepoId, analysisExists]);
 
-  // Fetch security data
   useEffect(() => {
     if (!selectedRepoId || !analysisExists || activeMode !== "security") return;
     (async () => {
@@ -547,11 +403,10 @@ export default function ArchitecturePage() {
     return { edges: Array.from(seen.values()), removed };
   }, []);
 
-  // Build mode-specific graph from analysis data
   const graphResult = useMemo(() => {
-    if (!analysisData) return { laidOut: [] as ModeNode[], dedupedEdges: [] as ModeEdge[], graphStats: null as { totalNodes: number; uniqueNodes: number; nodeDuplicatesRemoved: number; totalEdges: number; uniqueEdges: number; edgeDuplicatesRemoved: number } | null };
+    if (!analysisData) return { laidOut: [] as ModeNode[], dedupedEdges: [] as ModeEdge[], graphStats: null as typeof graphStats };
     const analysis = (analysisData?.analysis as Record<string, unknown>) || null;
-    if (!analysis) return { laidOut: [] as ModeNode[], dedupedEdges: [] as ModeEdge[], graphStats: null as { totalNodes: number; uniqueNodes: number; nodeDuplicatesRemoved: number; totalEdges: number; uniqueEdges: number; edgeDuplicatesRemoved: number } | null };
+    if (!analysis) return { laidOut: [] as ModeNode[], dedupedEdges: [] as ModeEdge[], graphStats: null as typeof graphStats };
     const services = (analysis?.services as DetectedService[]) || [];
     const apis = (analysis?.apis as DetectedApi[]) || [];
     const databases = (analysis?.databases as DetectedDatabase[]) || [];
@@ -573,7 +428,7 @@ export default function ArchitecturePage() {
         ({ nodes: modeNodes, edges: modeEdges } = transformSystemView(services, apis, databases, modules, events));
         break;
       case "uml":
-        ({ nodes: modeNodes, edges: modeEdges } = transformUmlView(modules, services));
+        ({ nodes: modeNodes, edges: modeEdges } = transformUmlView(modules));
         break;
       case "infrastructure":
         ({ nodes: modeNodes, edges: modeEdges } = transformInfrastructureView(infra, services));
@@ -581,8 +436,17 @@ export default function ArchitecturePage() {
       case "dataflow":
         ({ nodes: modeNodes, edges: modeEdges } = transformDataFlowView(services, apis, events, databases));
         break;
+      case "eventflow":
+        ({ nodes: modeNodes, edges: modeEdges } = transformEventFlowView(events, services));
+        break;
+      case "search":
+        ({ nodes: modeNodes, edges: modeEdges } = transformSearchView(services, databases));
+        break;
+      case "ml":
+        ({ nodes: modeNodes, edges: modeEdges } = transformMlPipelineView());
+        break;
       case "dependencies":
-        ({ nodes: modeNodes, edges: modeEdges } = transformDependencyView(services, modules, events));
+        ({ nodes: modeNodes, edges: modeEdges } = transformDependencyView(services, modules));
         break;
       case "security":
         ({ nodes: modeNodes, edges: modeEdges } = transformSecurityView(Array.from(allEnvVars), services, files));
@@ -621,8 +485,6 @@ export default function ArchitecturePage() {
       fitView({ padding: 0.3, duration: 300 });
     }, 100);
     return () => clearTimeout(timer);
-
-    // Syncing React Flow state is required when analysis result changes
   }, [graphResult, setNodes, setEdges, setGraphStats, fitView]);
 
   const handleSync = useCallback(async () => {
@@ -702,7 +564,6 @@ export default function ArchitecturePage() {
       ? apis.filter((a) => a.serviceName === service.name).map((a) => `${a.method} ${a.path}`)
       : [];
     const serviceDbs = service?.databases || node.data.databases || [];
-    const { status, label: statusLabel } = computeStatus(node.data);
     return {
       id: node.id, label: node.data.label, type: node.data.nodeType,
       technology: service?.technology || node.data.technology || "",
@@ -715,11 +576,8 @@ export default function ArchitecturePage() {
       endpoints: serviceEndpoints.length > 0 ? serviceEndpoints : undefined,
       databases: serviceDbs, envVars: node.data.envVars || service?.envVars,
       port: node.data.port || service?.port,
-      status: statusLabel,
-      health: node.data.health || (status === "warning" ? { score: 60, issues: [] } : undefined),
-      deploymentConfig: node.data.deploymentConfig,
+      health: node.data.health,
       methods: node.data.methods, properties: node.data.properties,
-      extends: node.data.extends, implements: node.data.implements,
       serviceData: service,
       severity: node.data.severity,
       risk: node.data.risk,
@@ -753,12 +611,6 @@ export default function ArchitecturePage() {
 
   const onPaneClick = useCallback(() => { setContextMenu(null); setInspectorData(null); }, []);
 
-  const onSelectionDrag = useCallback((_event: unknown, nodes: ModeNode[]) => {
-    if (nodes.length > 0) {
-      setInspectorData(buildInspectorData(nodes[0] as ModeNode));
-    }
-  }, [buildInspectorData]);
-
   const viewInKnowledgeGraph = useCallback((nodeId: string) => {
     window.open(`/dashboard/knowledge-graph?node=${nodeId}`, "_blank");
   }, []);
@@ -785,9 +637,9 @@ export default function ArchitecturePage() {
       );
     }
     if (activeFilter === "services") {
-      result = result.filter((n) => ["frontend", "backend", "service"].includes(n.data.nodeType));
+      result = result.filter((n) => ["frontend", "backend", "service", "gateway"].includes(n.data.nodeType));
     } else if (activeFilter === "infrastructure") {
-      result = result.filter((n) => ["infrastructure", "database", "queue", "cloud"].includes(n.data.nodeType));
+      result = result.filter((n) => ["infrastructure", "database", "queue", "cloud", "search", "cache"].includes(n.data.nodeType));
     } else if (activeFilter === "dependencies") {
       result = result.filter((n) => n.data.dependencyCount > 0 || (n.data.dependencies?.length || 0) > 0);
     } else if (activeFilter === "security") {
@@ -814,8 +666,6 @@ export default function ArchitecturePage() {
   const dependencies = (analysis?.dependencies as Array<unknown>) || [];
   const filesCount = (analysis?.files as Array<unknown>)?.length || 0;
   const modules = (analysis?.modules as DetectedModule[]) || [];
-  const infra = (analysis?.infra as DetectedInfrastructure[]) || [];
-  const events = (analysis?.events as DetectedEvent[]) || [];
   const aiAnalysis = (analysis?.aiAnalysis as AiAnalysisData) || null;
 
   const servicesCount = services.length;
@@ -846,17 +696,15 @@ export default function ArchitecturePage() {
   return (
     <DashboardLayout>
       <div className="flex h-full flex-col gap-3">
-        {/* Mode navigation tabs */}
         {analysisExists && (
           <Tabs
             value={activeMode}
             onValueChange={(v) => { setActiveMode(v as DiagramMode); setInspectorData(null); }}
             className="w-full"
           >
-            <TabsList className="bg-[#1c1f27] border border-[#414754] p-1 w-full justify-start gap-0.5 h-10 overflow-x-auto">
+            <TabsList className="bg-[#12141a] border border-[#2a2d35] p-1 w-full justify-start gap-0.5 h-10 overflow-x-auto">
               {DIAGRAM_MODES.map((mode) => {
                 const Icon = MODE_ICONS[mode.id] || Network;
-                const isActive = activeMode === mode.id;
                 return (
                   <TabsTrigger
                     key={mode.id}
@@ -872,10 +720,9 @@ export default function ArchitecturePage() {
           </Tabs>
         )}
 
-        {/* Toolbar */}
         <div className="flex items-center gap-3 flex-wrap">
           <Select value={selectedRepoId} onValueChange={setSelectedRepoId}>
-            <SelectTrigger className="w-[200px] border-[#414754] bg-[#1c1f27] text-[#e0e2ed] h-9 text-xs">
+            <SelectTrigger className="w-[200px] border-[#2a2d35] bg-[#12141a] text-[#e0e2ed] h-9 text-xs">
               <SelectValue placeholder="Select repository..." />
             </SelectTrigger>
             <SelectContent>
@@ -889,7 +736,7 @@ export default function ArchitecturePage() {
             <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8b90a0]" />
             <Input
               placeholder="Search nodes..."
-              className="pl-7 h-9 text-xs border-[#414754] bg-[#1c1f27] text-[#e0e2ed]"
+              className="pl-7 h-9 text-xs border-[#2a2d35] bg-[#12141a] text-[#e0e2ed]"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -901,29 +748,29 @@ export default function ArchitecturePage() {
             </Button>
           )}
           {analysisExists && !syncing && (
-            <Button onClick={handleSync} size="sm" variant="outline" className="border-[#414754] text-[#e0e2ed] hover:bg-[#272a32] h-9 text-xs">
+            <Button onClick={handleSync} size="sm" variant="outline" className="border-[#2a2d35] text-[#e0e2ed] hover:bg-[#1a1d24] h-9 text-xs">
               <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Re-analyze
             </Button>
           )}
 
           <div className="ml-auto flex items-center gap-1.5">
-            <Badge variant="outline" className="border-[#414754] text-[10px] text-[#8b90a0] hidden md:inline-flex">
+            <Badge variant="outline" className="border-[#2a2d35] text-[10px] text-[#8b90a0] hidden md:inline-flex">
               {nodeCount} nodes / {edgeCount} edges
             </Badge>
 
             {analysisExists && (
               <>
-                <div className="hidden md:flex items-center gap-0.5 rounded-lg border border-[#414754] bg-[#1c1f27] p-0.5">
-                  <button onClick={zoomIn} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Zoom In">
+                <div className="hidden md:flex items-center gap-0.5 rounded-lg border border-[#2a2d35] bg-[#12141a] p-0.5">
+                  <button onClick={zoomIn} className="p-1.5 rounded hover:bg-[#1a1d24] text-[#8b90a0] hover:text-[#e0e2ed]" title="Zoom In">
                     <ZoomIn className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={zoomOut} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Zoom Out">
+                  <button onClick={zoomOut} className="p-1.5 rounded hover:bg-[#1a1d24] text-[#8b90a0] hover:text-[#e0e2ed]" title="Zoom Out">
                     <ZoomOut className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => fitView({ padding: 0.3, duration: 300 })} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Fit to Screen">
+                  <button onClick={() => fitView({ padding: 0.3, duration: 300 })} className="p-1.5 rounded hover:bg-[#1a1d24] text-[#8b90a0] hover:text-[#e0e2ed]" title="Fit to Screen">
                     <Maximize className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={resetView} className="p-1.5 rounded hover:bg-[#272a32] text-[#8b90a0] hover:text-[#e0e2ed]" title="Reset View">
+                  <button onClick={resetView} className="p-1.5 rounded hover:bg-[#1a1d24] text-[#8b90a0] hover:text-[#e0e2ed]" title="Reset View">
                     <Minimize className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -933,13 +780,13 @@ export default function ArchitecturePage() {
                     <TooltipTrigger asChild>
                       <button
                         onClick={saveSnapshot}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#414754] text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#272a32] transition-all"
+                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#2a2d35] text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#1a1d24] transition-all"
                         title="Save Snapshot"
                       >
                         <Camera className="w-3.5 h-3.5" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent className="bg-[#1c1f27] border-[#414754] text-[#e0e2ed] text-xs">
+                    <TooltipContent className="bg-[#12141a] border-[#2a2d35] text-[#e0e2ed] text-xs">
                       Save architecture snapshot
                     </TooltipContent>
                   </Tooltip>
@@ -950,13 +797,13 @@ export default function ArchitecturePage() {
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => setSnapshotOpen(true)}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#414754] text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#272a32] transition-all"
+                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#2a2d35] text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#1a1d24] transition-all"
                         title="Architecture Time Machine"
                       >
                         <History className="w-3.5 h-3.5" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent className="bg-[#1c1f27] border-[#414754] text-[#e0e2ed] text-xs">
+                    <TooltipContent className="bg-[#12141a] border-[#2a2d35] text-[#e0e2ed] text-xs">
                       Architecture Time Machine
                     </TooltipContent>
                   </Tooltip>
@@ -976,7 +823,7 @@ export default function ArchitecturePage() {
                           </span>
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent className="bg-[#1c1f27] border-[#414754] text-[#e0e2ed] text-xs">
+                      <TooltipContent className="bg-[#12141a] border-[#2a2d35] text-[#e0e2ed] text-xs">
                         View security findings
                       </TooltipContent>
                     </Tooltip>
@@ -994,7 +841,7 @@ export default function ArchitecturePage() {
                         <span className="hidden sm:inline">AI Insights</span>
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent className="bg-[#1c1f27] border-[#414754] text-[#e0e2ed] text-xs">
+                    <TooltipContent className="bg-[#12141a] border-[#2a2d35] text-[#e0e2ed] text-xs">
                       AI-powered architecture analysis
                     </TooltipContent>
                   </Tooltip>
@@ -1002,7 +849,7 @@ export default function ArchitecturePage() {
 
                 <button
                   onClick={toggleFullscreen}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#414754] text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#272a32] transition-all"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg border border-[#2a2d35] text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#1a1d24] transition-all"
                   title={fullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 >
                   {fullscreen ? <Shrink className="w-3.5 h-3.5" /> : <Expand className="w-3.5 h-3.5" />}
@@ -1012,7 +859,6 @@ export default function ArchitecturePage() {
           </div>
         </div>
 
-        {/* Filter tabs */}
         {analysisExists && (
           <div className="flex gap-1 overflow-x-auto scrollbar-thin">
             {[
@@ -1031,7 +877,7 @@ export default function ArchitecturePage() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded-lg whitespace-nowrap transition-all shrink-0 ${
                     isActive
                       ? "bg-[#0070f3]/10 text-[#0070f3] border border-[#0070f3]/20"
-                      : "text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#272a32]/50 border border-transparent"
+                      : "text-[#8b90a0] hover:text-[#e0e2ed] hover:bg-[#1a1d24]/50 border border-transparent"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -1040,7 +886,7 @@ export default function ArchitecturePage() {
               );
             })}
 
-            <div className="w-px h-5 bg-[#414754] mx-1 self-center" />
+            <div className="w-px h-5 bg-[#2a2d35] mx-1 self-center" />
 
             {LAYER_ORDER.map((layer) => {
               const expanded = expandedLayers.has(layer.key);
@@ -1049,7 +895,7 @@ export default function ArchitecturePage() {
                   key={layer.key}
                   onClick={() => toggleLayer(layer.key)}
                   className={`flex items-center gap-1 px-2 py-1.5 text-[10px] font-medium rounded-lg whitespace-nowrap transition-all shrink-0 ${
-                    expanded ? "text-[#e0e2ed] hover:bg-[#272a32]/50" : "text-[#414754] hover:text-[#8b90a0]"
+                    expanded ? "text-[#e0e2ed] hover:bg-[#1a1d24]/50" : "text-[#2a2d35] hover:text-[#8b90a0]"
                   }`}
                   title={expanded ? `Collapse ${layer.label}` : `Expand ${layer.label}`}
                 >
@@ -1061,7 +907,7 @@ export default function ArchitecturePage() {
 
             {graphStats && (graphStats.nodeDuplicatesRemoved > 0 || graphStats.edgeDuplicatesRemoved > 0) && (
               <>
-                <div className="w-px h-5 bg-[#414754] mx-1 self-center" />
+                <div className="w-px h-5 bg-[#2a2d35] mx-1 self-center" />
                 <button
                   onClick={() => setShowDiagnostics((v) => !v)}
                   className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded-lg text-yellow-400 border border-yellow-400/20 bg-yellow-400/5 hover:bg-yellow-400/10 transition-all"
@@ -1075,30 +921,28 @@ export default function ArchitecturePage() {
           </div>
         )}
 
-        {/* Graph Diagnostics */}
         {analysisExists && showDiagnostics && graphStats && (
-          <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/50 p-3 text-[11px]">
+          <div className="rounded-lg border border-[#2a2d35] bg-[#12141a]/50 p-3 text-[11px]">
             <p className="font-semibold text-[#e0e2ed] mb-2 flex items-center gap-1.5">
               <BarChart3 className="w-3.5 h-3.5" /> Graph Diagnostics
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              <div className="rounded border border-[#414754]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Total Nodes</p><p className="text-sm font-mono text-[#e0e2ed]">{graphStats.totalNodes}</p></div>
-              <div className="rounded border border-[#414754]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Unique Nodes</p><p className="text-sm font-mono text-[#22c55e]">{graphStats.uniqueNodes}</p></div>
-              <div className="rounded border border-[#414754]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Duplicates Removed</p><p className="text-sm font-mono text-[#f59e0b]">{graphStats.nodeDuplicatesRemoved}</p></div>
-              <div className="rounded border border-[#414754]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Total Edges</p><p className="text-sm font-mono text-[#e0e2ed]">{graphStats.totalEdges}</p></div>
-              <div className="rounded border border-[#414754]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Unique Edges</p><p className="text-sm font-mono text-[#22c55e]">{graphStats.uniqueEdges}</p></div>
-              <div className="rounded border border-[#414754]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Duplicates Removed</p><p className="text-sm font-mono text-[#f59e0b]">{graphStats.edgeDuplicatesRemoved}</p></div>
+              <div className="rounded border border-[#2a2d35]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Total Nodes</p><p className="text-sm font-mono text-[#e0e2ed]">{graphStats.totalNodes}</p></div>
+              <div className="rounded border border-[#2a2d35]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Unique Nodes</p><p className="text-sm font-mono text-[#22c55e]">{graphStats.uniqueNodes}</p></div>
+              <div className="rounded border border-[#2a2d35]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Duplicates Removed</p><p className="text-sm font-mono text-[#f59e0b]">{graphStats.nodeDuplicatesRemoved}</p></div>
+              <div className="rounded border border-[#2a2d35]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Total Edges</p><p className="text-sm font-mono text-[#e0e2ed]">{graphStats.totalEdges}</p></div>
+              <div className="rounded border border-[#2a2d35]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Unique Edges</p><p className="text-sm font-mono text-[#22c55e]">{graphStats.uniqueEdges}</p></div>
+              <div className="rounded border border-[#2a2d35]/50 p-2"><p className="text-[9px] text-[#8b90a0]">Duplicates Removed</p><p className="text-sm font-mono text-[#f59e0b]">{graphStats.edgeDuplicatesRemoved}</p></div>
             </div>
           </div>
         )}
 
-        {/* Advanced filters */}
         {analysisExists && (
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="w-3 h-3 text-[#8b90a0] shrink-0" />
             <input
               placeholder="Filter by technology..."
-              className="h-7 text-[11px] rounded-lg border border-[#414754] bg-[#1c1f27] text-[#e0e2ed] px-2 max-w-[160px] outline-none focus:border-[#0070f3]/50 transition-all"
+              className="h-7 text-[11px] rounded-lg border border-[#2a2d35] bg-[#12141a] text-[#e0e2ed] px-2 max-w-[160px] outline-none focus:border-[#0070f3]/50 transition-all"
               value={techFilter}
               onChange={(e) => setTechFilter(e.target.value)}
             />
@@ -1112,9 +956,8 @@ export default function ArchitecturePage() {
           </div>
         )}
 
-        {/* Live progress bar */}
         {syncing && syncProgress && (
-          <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/50 p-3">
+          <div className="rounded-lg border border-[#2a2d35] bg-[#12141a]/50 p-3">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
                 {syncProgress.status === "COMPLETED" ? (
@@ -1136,8 +979,8 @@ export default function ArchitecturePage() {
                 const done = completedSteps.includes(step.key);
                 const current = syncProgress.stage === step.key;
                 return (
-                  <div key={step.key} className={`flex items-center gap-1 text-[9px] ${done ? "text-green-400" : current ? "text-[#0070f3]" : "text-[#414754]"}`}>
-                    {done ? <CheckCircle2 className="w-2.5 h-2.5" /> : current ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <div className="w-2.5 h-2.5 rounded-full border border-[#414754]" />}
+                  <div key={step.key} className={`flex items-center gap-1 text-[9px] ${done ? "text-green-400" : current ? "text-[#0070f3]" : "text-[#2a2d35]"}`}>
+                    {done ? <CheckCircle2 className="w-2.5 h-2.5" /> : current ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <div className="w-2.5 h-2.5 rounded-full border border-[#2a2d35]" />}
                     {step.label}
                   </div>
                 );
@@ -1146,13 +989,12 @@ export default function ArchitecturePage() {
           </div>
         )}
 
-        {/* Stats bar */}
         {analysisExists && analysis && (
           <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
             {[
               { label: "Services", value: servicesCount, icon: Server, color: "#06b6d4" },
               { label: "APIs", value: apisCount, icon: Globe, color: "#3b82f6" },
-              { label: "Databases", value: databasesCount, icon: Database, color: "#f59e0b" },
+              { label: "Databases", value: databasesCount, icon: Database, color: "#ec4899" },
               { label: "Dependencies", value: dependenciesCount, icon: Package, color: "#8b5cf6" },
               { label: "Modules", value: modulesCount, icon: Box, color: "#10b981" },
               { label: "Files", value: filesCount, icon: FileText, color: "#6b7280" },
@@ -1161,7 +1003,10 @@ export default function ArchitecturePage() {
                 ? [{ label: "Style", value: aiAnalysis.architectureStyle, icon: Layers, color: "#0070f3" }]
                 : [{ label: "Edges", value: edgeCount, icon: BarChart3, color: "#6366f1" }]),
             ].map((stat) => (
-              <div key={stat.label} className="glass-panel rounded-xl p-2.5 hover:border-[#0070f3]/20 transition-all">
+              <div key={stat.label} className="rounded-xl p-2.5 hover:border-[#0070f3]/20 transition-all" style={{
+                background: "rgba(10,10,10,0.6)",
+                border: "1px solid rgba(42,45,53,0.4)",
+              }}>
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <stat.icon className="w-3 h-3" style={{ color: stat.color }} />
                   <p className="text-[9px] text-[#8b90a0] font-medium">{stat.label}</p>
@@ -1172,9 +1017,11 @@ export default function ArchitecturePage() {
           </div>
         )}
 
-        {/* Main canvas */}
-        <div className={`flex gap-3 min-h-0 ${fullscreen ? "fixed inset-0 z-50 bg-[#10131b] p-4" : "flex-1"}`}>
-          <div className={`relative rounded-xl overflow-hidden glass-panel ${fullscreen ? "flex-1" : "flex-1"}`}>
+        <div className={`flex gap-3 min-h-0 ${fullscreen ? "fixed inset-0 z-50 bg-[#0a0a0a] p-4" : "flex-1"}`}>
+          <div className={`relative rounded-xl overflow-hidden ${fullscreen ? "flex-1" : "flex-1"}`} style={{
+            background: "rgba(10,10,10,0.6)",
+            border: "1px solid rgba(42,45,53,0.4)",
+          }}>
             <ThreeBackground />
             {analysisExists ? (
               <ReactFlow
@@ -1188,9 +1035,9 @@ export default function ArchitecturePage() {
                 onNodeMouseEnter={onNodeMouseEnter}
                 onNodeMouseLeave={onNodeMouseLeave}
                 onPaneClick={onPaneClick}
-                onSelectionDrag={onSelectionDrag}
                 onInit={(instance) => { rfInstance.current = instance; }}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 fitView
                 attributionPosition="bottom-left"
                 minZoom={0.05}
@@ -1199,28 +1046,34 @@ export default function ArchitecturePage() {
                 panOnDrag={[1, 2]}
                 selectNodesOnDrag
                 defaultEdgeOptions={{
-                  type: "smoothstep", animated: true,
-                  style: { stroke: "#6366f1", strokeWidth: 2 },
-                  markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: "#6366f1" },
+                  type: "animatedSmoothStep",
+                  animated: true,
+                  style: { stroke: "#6366f1", strokeWidth: 1.5, opacity: 0.6 },
+                  markerEnd: { type: "arrowclosed", width: 16, height: 16, color: "#6366f1" },
                 }}
                 proOptions={{ hideAttribution: true }}
                 zoomOnScroll
                 panOnScroll={false}
               >
-                <Background variant={BackgroundVariant.Dots} gap={16} size={0.8} color="#272a32" />
+                <Background variant={BackgroundVariant.Dots} gap={24} size={0.6} color="#1a1d24" />
                 <Controls
-                  className="glass-panel rounded-lg border-[#414754] [&>button]:border-[#414754] [&>button]:text-[#8b90a0] [&>button]:hover:bg-[#272a32]"
+                  className="!bg-transparent !border-0 [&>button]:!bg-[#0a0a0a] [&>button]:!border [&>button]:!border-[#2a2d35] [&>button]:!text-[#8b90a0] [&>button]:!rounded-lg"
                   showInteractive={false}
                 />
                 <MiniMap
                   nodeColor={(nd) => {
-                    const d = (nd.data as ModeNode["data"]);
-                    if (d.severity) return SEVERITY_COLORS[d.severity] || "#6b7280";
-                    return NODE_COLORS[d.nodeType] || "#272a32";
+                    const colors: Record<string, string> = {
+                      gateway: "#0d9488", frontend: "#3b82f6", service: "#e0e2ed",
+                      database: "#ec4899", queue: "#f59e0b", cache: "#ef4444",
+                      search: "#f97316", infrastructure: "#8b5cf6", external: "#06b6d4",
+                      ai: "#7c3aed", ml: "#7c3aed", knowledge: "#2563eb",
+                      security: "#ef4444", event: "#06b6d4", uml_class: "#a855f7",
+                    };
+                    return colors[(nd.data as ModeNode["data"]).nodeType] || "#1a1d24";
                   }}
-                  maskColor="rgba(16,19,27,0.85)"
-                  className="glass-panel rounded-lg border-[#414754]"
-                  style={{ width: 160, height: 100 }}
+                  maskColor="rgba(10,10,10,0.85)"
+                  className="!rounded-lg"
+                  style={{ width: 160, height: 100, border: "1px solid rgba(42,45,53,0.4)" }}
                 />
               </ReactFlow>
             ) : loading || (loadingDiagram && !analysisData) ? (
@@ -1230,12 +1083,12 @@ export default function ArchitecturePage() {
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center max-w-sm">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#272a32]">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#1a1d24]">
                     <Server className="h-8 w-8 text-[#8b90a0]" />
                   </div>
                   <h3 className="text-base font-semibold text-[#e0e2ed] mb-1">No Architecture Data</h3>
                   <p className="text-xs text-[#8b90a0] mb-5">
-                    Select a repository and run analysis to see real architecture diagrams, dependency graphs, and AI-powered tech stack detection.
+                    Select a repository and run analysis to see premium architecture diagrams, dependency graphs, and AI-powered tech stack detection.
                   </p>
                   <Button onClick={handleSync} className="bg-[#0070f3] hover:bg-[#0060d3] text-xs h-9">
                     <Play className="mr-1.5 h-3.5 w-3.5" /> Run Analysis
@@ -1245,7 +1098,6 @@ export default function ArchitecturePage() {
             )}
           </div>
 
-          {/* Deep Inspector Panel */}
           {analysisExists && inspectorData && (
             <DeepInspectorPanel
               data={inspectorData}
@@ -1256,10 +1108,12 @@ export default function ArchitecturePage() {
           )}
         </div>
 
-        {/* Architecture Timeline */}
         {analysisExists && (
-          <footer className="glass-panel rounded-xl overflow-hidden flex flex-col shrink-0">
-            <div className="px-4 py-2 border-b border-[#414754]/50 flex items-center justify-between">
+          <footer className="rounded-xl overflow-hidden flex flex-col shrink-0" style={{
+            background: "rgba(10,10,10,0.6)",
+            border: "1px solid rgba(42,45,53,0.4)",
+          }}>
+            <div className="px-4 py-2 border-b border-[#2a2d35]/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <History className="w-4 h-4 text-[#0070f3]" />
                 <h4 className="font-bold text-xs text-[#e0e2ed]">Architecture Timeline</h4>
@@ -1274,14 +1128,14 @@ export default function ArchitecturePage() {
               </div>
             </div>
             <div className="flex items-center px-6 py-2.5 relative">
-              <div className="absolute left-6 right-6 h-[2px] bg-[#414754]/50 rounded-full" />
+              <div className="absolute left-6 right-6 h-[2px] bg-[#2a2d35]/50 rounded-full" />
               <div className="flex-1 flex justify-between relative">
                 {[
                   { label: "Created", active: true }, { label: "Imported", active: true },
                   { label: "Analyzed", active: true }, { label: "Latest", active: true },
                 ].map((m) => (
                   <div key={m.label} className="flex flex-col items-center relative cursor-pointer hover:opacity-80">
-                    <div className={`w-2.5 h-2.5 rounded-full border-2 z-10 -mt-1 ${m.active ? "bg-[#0070f3] border-[#0070f3]" : "bg-[#1c1f27] border-[#414754]"}`} />
+                    <div className={`w-2.5 h-2.5 rounded-full border-2 z-10 -mt-1 ${m.active ? "bg-[#0070f3] border-[#0070f3]" : "bg-[#12141a] border-[#2a2d35]"}`} />
                     <span className={`mt-1 font-mono text-[8px] ${m.active ? "text-[#0070f3] font-semibold" : "text-[#8b90a0]"}`}>{m.label}</span>
                   </div>
                 ))}
@@ -1291,7 +1145,6 @@ export default function ArchitecturePage() {
         )}
       </div>
 
-      {/* Context Menu */}
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x} y={contextMenu.y} nodeId={contextMenu.nodeId} label={contextMenu.label}
@@ -1304,26 +1157,28 @@ export default function ArchitecturePage() {
         />
       )}
 
-      {/* Hover Tooltip */}
       {hoveredNode && !contextMenu && !inspectorData && (
         <div
-          className="fixed z-[999] pointer-events-none glass-panel rounded-xl border border-[#414754] shadow-2xl px-3 py-2 max-w-[200px]"
-          style={{ left: hoveredNode.position.x + 12, top: hoveredNode.position.y - 10 }}
+          className="fixed z-[999] pointer-events-none rounded-xl border border-[#2a2d35] shadow-2xl px-3 py-2 max-w-[200px]"
+          style={{
+            left: hoveredNode.position.x + 12,
+            top: hoveredNode.position.y - 10,
+            background: "rgba(10,10,10,0.9)",
+            backdropFilter: "blur(12px)",
+          }}
         >
           <div className="flex items-center gap-1.5 mb-0.5">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: NODE_COLORS[hoveredNode.data.nodeType] || "#6b7280" }} />
             <p className="text-xs font-bold text-[#e0e2ed] truncate">{hoveredNode.data.label}</p>
           </div>
           <p className="text-[10px] text-[#8b90a0] truncate">{hoveredNode.data.nodeType}{hoveredNode.data.technology ? ` · ${hoveredNode.data.technology}` : ""}</p>
           {hoveredNode.data.description && (
-            <p className="text-[9px] text-[#8b90a0] mt-0.5 line-clamp-2">{hoveredNode.data.description}</p>
+            <p className="text-[9px] text-[#6b7280] mt-0.5 line-clamp-2">{hoveredNode.data.description}</p>
           )}
         </div>
       )}
 
-      {/* AI Insights Dialog */}
       <Dialog open={aiOpen} onOpenChange={setAiOpen}>
-        <DialogContent className="max-w-2xl bg-[#10131b] border-[#414754] text-[#e0e2ed]">
+        <DialogContent className="max-w-2xl bg-[#0a0a0a] border-[#2a2d35] text-[#e0e2ed]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-yellow-400" />
@@ -1337,7 +1192,7 @@ export default function ArchitecturePage() {
             <ScrollArea className="max-h-[70vh] scrollbar-thin">
               <div className="space-y-5 pr-4">
                 {aiAnalysis.summary && (
-                  <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-4">
+                  <div className="rounded-lg border border-[#2a2d35] bg-[#12141a]/30 p-4">
                     <p className="text-xs font-medium text-[#8b90a0] mb-2 flex items-center gap-1">
                       <FileText className="h-3.5 w-3.5" /> Architecture Summary
                     </p>
@@ -1346,7 +1201,7 @@ export default function ArchitecturePage() {
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   {aiAnalysis.architectureStyle && (
-                    <div className="rounded-lg border border-[#414754] p-3">
+                    <div className="rounded-lg border border-[#2a2d35] p-3">
                       <p className="text-[10px] text-[#8b90a0] mb-1 flex items-center gap-1">
                         <Layers className="h-3.5 w-3.5" /> Architecture Style
                       </p>
@@ -1354,7 +1209,7 @@ export default function ArchitecturePage() {
                     </div>
                   )}
                   {aiAnalysis.complexity && (
-                    <div className="rounded-lg border border-[#414754] p-3">
+                    <div className="rounded-lg border border-[#2a2d35] p-3">
                       <p className="text-[10px] text-[#8b90a0] mb-1 flex items-center gap-1">
                         <BarChart3 className="h-3.5 w-3.5" /> Complexity
                       </p>
@@ -1367,10 +1222,10 @@ export default function ArchitecturePage() {
                     <p className="text-xs font-medium text-[#8b90a0] mb-2">Detected Architecture Patterns</p>
                     <div className="space-y-2">
                       {aiAnalysis.patterns.map((p, i) => (
-                        <div key={i} className="rounded-lg border border-[#414754] bg-[#1c1f27]/20 p-3">
+                        <div key={i} className="rounded-lg border border-[#2a2d35] bg-[#12141a]/20 p-3">
                           <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-medium text-[#e0e2ed]">{p.pattern}</p>
-                            <Badge variant="outline" className="border-[#414754] text-[10px]">{Math.round(p.confidence * 100)}% confidence</Badge>
+                            <Badge variant="outline" className="border-[#2a2d35] text-[10px]">{Math.round(p.confidence * 100)}% confidence</Badge>
                           </div>
                           <p className="text-xs text-[#8b90a0]">{p.description}</p>
                         </div>
@@ -1397,9 +1252,8 @@ export default function ArchitecturePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Architecture Time Machine Dialog */}
       <Dialog open={snapshotOpen} onOpenChange={setSnapshotOpen}>
-        <DialogContent className="max-w-2xl bg-[#10131b] border-[#414754] text-[#e0e2ed]">
+        <DialogContent className="max-w-2xl bg-[#0a0a0a] border-[#2a2d35] text-[#e0e2ed]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-[#0070f3]" />
@@ -1417,8 +1271,8 @@ export default function ArchitecturePage() {
               </Button>
             </div>
             {snapshots.length === 0 ? (
-              <div className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-6 text-center">
-                <Clock className="w-8 h-8 text-[#414754] mx-auto mb-2" />
+              <div className="rounded-lg border border-[#2a2d35] bg-[#12141a]/30 p-6 text-center">
+                <Clock className="w-8 h-8 text-[#2a2d35] mx-auto mb-2" />
                 <p className="text-xs text-[#8b90a0]">No snapshots yet. Run analysis and save your first snapshot.</p>
               </div>
             ) : (
@@ -1427,13 +1281,13 @@ export default function ArchitecturePage() {
                   {snapshots.map((snap) => (
                     <div
                       key={snap.id}
-                      className="flex items-center justify-between rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-3 hover:bg-[#1c1f27]/60 transition-all cursor-pointer"
+                      className="flex items-center justify-between rounded-lg border border-[#2a2d35] bg-[#12141a]/30 p-3 hover:bg-[#12141a]/60 transition-all cursor-pointer"
                       onClick={() => loadSnapshot(snap)}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-[#e0e2ed] truncate">{snap.name}</p>
-                          <Badge variant="outline" className="border-[#414754] text-[9px]">{snap.mode}</Badge>
+                          <Badge variant="outline" className="border-[#2a2d35] text-[9px]">{snap.mode}</Badge>
                         </div>
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-[10px] text-[#8b90a0] font-mono">
@@ -1461,9 +1315,8 @@ export default function ArchitecturePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Security Findings Dialog */}
       <Dialog open={securityOpen} onOpenChange={setSecurityOpen}>
-        <DialogContent className="max-w-3xl bg-[#10131b] border-[#414754] text-[#e0e2ed]">
+        <DialogContent className="max-w-3xl bg-[#0a0a0a] border-[#2a2d35] text-[#e0e2ed]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-[#ef4444]" />
@@ -1477,7 +1330,7 @@ export default function ArchitecturePage() {
             <div className="space-y-4">
               <div className="flex gap-2">
                 {Object.entries(securityData.severityCounts || {}).map(([sev, count]) => (
-                  <div key={sev} className="flex-1 rounded-lg border border-[#414754] p-3 text-center">
+                  <div key={sev} className="flex-1 rounded-lg border border-[#2a2d35] p-3 text-center">
                     <p className="text-lg font-bold font-mono" style={{ color: SEVERITY_COLORS[sev] || "#8b90a0" }}>{count as number}</p>
                     <p className="text-[10px] text-[#8b90a0]">{sev}</p>
                   </div>
@@ -1492,13 +1345,13 @@ export default function ArchitecturePage() {
                     </div>
                   ) : (
                     securityData.findings.map((f) => (
-                      <div key={f.id} className="rounded-lg border border-[#414754] bg-[#1c1f27]/30 p-3">
+                      <div key={f.id} className="rounded-lg border border-[#2a2d35] bg-[#12141a]/30 p-3">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: SEVERITY_COLORS[f.severity] }} />
                             <p className="text-sm font-medium text-[#e0e2ed]">{f.title}</p>
                           </div>
-                          <Badge variant="outline" className={`border-[${SEVERITY_COLORS[f.severity]}]/30 text-[10px]`} style={{ borderColor: `${SEVERITY_COLORS[f.severity]}40`, color: SEVERITY_COLORS[f.severity] }}>
+                          <Badge variant="outline" className="text-[10px]" style={{ borderColor: `${SEVERITY_COLORS[f.severity]}40`, color: SEVERITY_COLORS[f.severity] }}>
                             {f.severity}
                           </Badge>
                         </div>
@@ -1524,11 +1377,15 @@ export default function ArchitecturePage() {
         </DialogContent>
       </Dialog>
 
-      {/* FAB Buttons */}
       <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-50">
         <button
           onClick={() => fitView({ padding: 0.3, duration: 300 })}
-          className="w-9 h-9 rounded-full glass-panel flex items-center justify-center text-[#e0e2ed] hover:bg-[#0070f3] transition-all"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-[#e0e2ed] hover:bg-[#0070f3] transition-all"
+          style={{
+            background: "rgba(10,10,10,0.8)",
+            border: "1px solid rgba(42,45,53,0.6)",
+            backdropFilter: "blur(12px)",
+          }}
         >
           <ZoomIn className="w-4 h-4" />
         </button>

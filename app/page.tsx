@@ -4,23 +4,18 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BrainCircuit,
   Menu,
   PlayCircle,
-  Search,
   X,
   ArrowRight,
   GitBranch,
   Globe,
   Code2,
-  Server,
-  Database,
   Container,
   Workflow,
   Network,
-  BarChart3,
   Shield,
   RefreshCw,
   Bot,
@@ -46,14 +41,6 @@ const staggerContainer = {
   viewport: { once: true },
   transition: { staggerChildren: 0.1 },
 };
-
-const techStackLogos = [
-  "React", "Next.js", "Vue", "Angular", "Svelte",
-  "Node.js", "NestJS", "Express", "FastAPI", "Django",
-  "TypeScript", "Python", "Go", "Rust", "Java",
-  "PostgreSQL", "MongoDB", "Redis", "Docker", "Kubernetes",
-  "AWS", "Terraform", "Kafka", "GitHub",
-];
 
 const featureCards = [
   {

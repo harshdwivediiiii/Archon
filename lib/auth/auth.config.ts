@@ -48,8 +48,6 @@ async function getVerifiedGitHubProfile({
  * Keep this free of Prisma, Node.js APIs, and adapters.
  */
 export const authConfig = {
-  secret: process.env.AUTH_SECRET,
-  trustHost: process.env.NODE_ENV === "production" ? false : true,
   providers: [
     GitHub({
       clientId: process.env.AUTH_GITHUB_ID,

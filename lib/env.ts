@@ -69,7 +69,7 @@ const envSchema = z.object({
       (value) => !value || !isPlaceholder(value),
       "AUTH_URL must be a real URL, not a placeholder"
     ),
-  OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+  OPENAI_API_KEY: z.string().optional().default(""),
   STRIPE_SECRET_KEY: z.string(),
   STRIPE_WEBHOOK_SECRET: z.string(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string(),
@@ -77,7 +77,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_POSTHOG_KEY: z.string(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url("NEXT_PUBLIC_POSTHOG_HOST must be a valid URL"),
   SENTRY_DSN: z.string(),
-  NEXT_PUBLIC_APP_URL: z.string().url("NEXT_PUBLIC_APP_URL must be a valid URL"),
+  NEXT_PUBLIC_APP_URL: z.string().url("NEXT_PUBLIC_APP_URL must be a valid URL").optional().or(z.literal("")),
   OPENAI_MODEL: z.string().optional(),
   STORAGE_PATH: z.string().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).optional(),
@@ -99,7 +99,7 @@ function loadRawEnv(): Record<string, string | undefined> {
     AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
     AUTH_URL:
       process.env.AUTH_URL ?? process.env.NEXTAUTH_URL,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? "",
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? "",
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
@@ -109,7 +109,7 @@ function loadRawEnv(): Record<string, string | undefined> {
     NEXT_PUBLIC_POSTHOG_HOST:
       process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://app.posthog.com",
     SENTRY_DSN: process.env.SENTRY_DSN ?? "",
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "",
     OPENAI_MODEL: process.env.OPENAI_MODEL,
     STORAGE_PATH: process.env.STORAGE_PATH,
     NODE_ENV: process.env.NODE_ENV as Env["NODE_ENV"],

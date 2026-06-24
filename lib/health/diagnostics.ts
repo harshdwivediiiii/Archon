@@ -39,7 +39,7 @@ async function checkEnvironment(): Promise<HealthCheck> {
       status: "connected",
       message: "Required environment variables validated",
       details: {
-        appUrl: env.NEXT_PUBLIC_APP_URL,
+        appUrl: env.NEXT_PUBLIC_APP_URL || "not set",
         databaseHost: db.hostname,
         databaseName: db.database,
         usesPooler: db.usesPooler,

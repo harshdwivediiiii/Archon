@@ -1,73 +1,112 @@
-import NextAuth from "next-auth";
+import NextAuth, { type Session } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db/prisma";
 import { getEnv } from "@/lib/env";
 import { authConfig } from "./auth.config";
-
-const env = getEnv();
+import { NextResponse } from "next/server";
 
 /**
- * Startup validation: fail fast with clear errors if OAuth credentials are missing.
+ * Log auth environment status at startup.
+ * Never throws — allows partial OAuth config (GitHub only, Google only, neither).
  */
-function validateAuthEnv(): void {
-  const missing: string[] = [];
+function logAuthEnv(): void {
+  const googleOk = !!process.env.AUTH_GOOGLE_ID && !!process.env.AUTH_GOOGLE_SECRET;
+  const githubOk = !!process.env.AUTH_GITHUB_ID && !!process.env.AUTH_GITHUB_SECRET;
+  const secretOk = !!process.env.AUTH_SECRET && process.env.AUTH_SECRET.length >= 32;
 
-  if (!process.env.AUTH_GOOGLE_ID) {
-    missing.push("AUTH_GOOGLE_ID (Google OAuth Client ID)");
+  if (!googleOk) {
+    console.warn("[auth] Google OAuth not configured (AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET)");
   }
-  if (!process.env.AUTH_GOOGLE_SECRET) {
-    missing.push("AUTH_GOOGLE_SECRET (Google OAuth Client Secret)");
+  if (!githubOk) {
+    console.warn("[auth] GitHub OAuth not configured (AUTH_GITHUB_ID / AUTH_GITHUB_SECRET)");
   }
-  if (!process.env.AUTH_GITHUB_ID) {
-    missing.push("AUTH_GITHUB_ID (GitHub OAuth Client ID)");
-  }
-  if (!process.env.AUTH_GITHUB_SECRET) {
-    missing.push("AUTH_GITHUB_SECRET (GitHub OAuth Client Secret)");
-  }
-  if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
-    missing.push("AUTH_SECRET (must be at least 32 characters)");
-  }
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Auth.js startup validation failed - missing or invalid environment variables:\n  - ${missing.join("\n  - ")}\n\n` +
-        "Set these in your .env file or Vercel project environment variables."
-    );
+  if (!secretOk) {
+    console.warn("[auth] AUTH_SECRET missing or too short (must be >= 32 characters)");
   }
 
   const url = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL;
   if (!url) {
-    console.warn(
-      "[auth] Warning: AUTH_URL/NEXTAUTH_URL is not set. " +
-        "Auth.js will auto-detect the URL from VERCEL_URL or request headers. " +
-        "Set AUTH_URL explicitly for production to avoid callback URL issues."
-    );
+    console.warn("[auth] AUTH_URL/NEXTAUTH_URL not set. Auth.js will auto-detect from VERCEL_URL.");
   }
+
+  console.log("[auth] Environment:", process.env.NODE_ENV ?? "unknown");
+  console.log("[auth] Platform:", process.env.VERCEL ? "vercel" : "self-hosted");
+  console.log("[auth] AUTH_SECRET set:", !!process.env.AUTH_SECRET);
+  console.log("[auth] Google configured:", googleOk);
+  console.log("[auth] GitHub configured:", githubOk);
+  console.log("[auth] DATABASE_URL set:", !!process.env.DATABASE_URL);
+  console.log("[auth] AUTH_URL:", process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "not set");
+  console.log("[auth] VERCEL_URL:", process.env.VERCEL_URL ?? "not set");
 }
 
-// Run validation at module load time (server boot)
-validateAuthEnv();
+logAuthEnv();
 
-/**
- * Full Auth.js instance for Node.js runtimes (API routes, server components).
- * Extends the edge-safe authConfig with Prisma adapter and database sessions.
- */
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  ...authConfig,
-  adapter: PrismaAdapter(prisma),
-  secret: env.AUTH_SECRET,
-  session: {
-    strategy: "database",
-  },
-  providers: authConfig.providers,
-  callbacks: {
-    ...authConfig.callbacks,
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
-      }
-      return session;
+let handlers: {
+  GET: (req: Request, ctx?: unknown) => Promise<Response>;
+  POST: (req: Request, ctx?: unknown) => Promise<Response>;
+} = {
+  GET: async () => new Response("Auth loading", { status: 503 }),
+  POST: async () => new Response("Auth loading", { status: 503 }),
+};
+let signIn: (...args: unknown[]) => Promise<void> = async () => {};
+let signOut: (...args: unknown[]) => Promise<void> = async () => {};
+let auth: () => Promise<Session | null> = async () => null;
+
+try {
+  const env = getEnv();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const authResult: any = NextAuth({
+    ...authConfig,
+    adapter: PrismaAdapter(prisma),
+    secret: env.AUTH_SECRET,
+    session: { strategy: "database" },
+    providers: authConfig.providers,
+    callbacks: {
+      ...authConfig.callbacks,
+      async session({ session, user }) {
+        if (session.user) {
+          session.user.id = user.id;
+        }
+        return session;
+      },
     },
-  },
-  debug: process.env.NODE_ENV === "development",
-});
+    debug: process.env.NODE_ENV === "development",
+  });
+
+  handlers = authResult.handlers as typeof handlers;
+  signIn = authResult.signIn as typeof signIn;
+  signOut = authResult.signOut as typeof signOut;
+  auth = authResult.auth as typeof auth;
+
+  console.log("[auth] Auth.js initialized successfully");
+} catch (error) {
+  const msg = error instanceof Error ? error.message : String(error);
+  console.error("[auth] Auth initialization failed:", msg);
+
+  const degradedHandler = () =>
+    Promise.resolve(
+      NextResponse.json(
+        {
+          error: "Authentication is not configured",
+          message: msg,
+          hint: "Set the required environment variables in your Vercel project dashboard.",
+        },
+        { status: 500 }
+      )
+    );
+
+  handlers = {
+    GET: degradedHandler,
+    POST: degradedHandler,
+  };
+  signIn = async () => {
+    throw new Error("Auth not configured: " + msg);
+  };
+  signOut = async () => {
+    throw new Error("Auth not configured: " + msg);
+  };
+  auth = async () => null;
+}
+
+export { handlers, signIn, signOut, auth };
