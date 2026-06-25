@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
@@ -24,8 +24,10 @@ import {
   X,
   Bell,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { UserMenu } from "@/components/ui/user-menu";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { GlobalSearch } from "@/components/ui/global-search";
 
 interface SidebarItem {
   id: string;
@@ -53,7 +55,21 @@ const bottomItems: SidebarItem[] = [
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+      if (e.key === "Escape") setSearchOpen(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#10131b] text-[#e0e2ed]">
@@ -88,7 +104,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
+        <div className="mx-3 mb-2 flex items-center gap-3 rounded-lg border border-[#414754] bg-[#1c1f27] p-3">
+          <UserAvatar
+            name={session?.user?.name}
+            email={session?.user?.email}
+            image={session?.user?.image}
+            className="h-9 w-9"
+          />
+          <div className="flex-1 overflow-hidden">
+            <p className="truncate text-sm font-medium text-[#e0e2ed]">
+              {session?.user?.name || "User"}
+            </p>
+            <p className="truncate text-xs text-[#c1c6d7]">
+              {session?.user?.email || ""}
+            </p>
+          </div>
+        </div>
+
+        <nav className="flex flex-1 flex-col gap-1 px-3 pb-4">
           <div className="space-y-1">
             {sidebarItems.map((item) => {
               const isActive = pathname === item.href;
@@ -177,16 +210,16 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-lg border border-[#414754] bg-[#1c1f27] px-4 py-1.5 text-sm focus-within:ring-1 focus-within:ring-[#0070f3]">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-[#414754] bg-[#1c1f27] px-4 py-1.5 text-sm focus-within:ring-1 focus-within:ring-[#0070f3] hover:border-zinc-600 transition-colors"
+            >
               <Search className="h-4 w-4 text-[#c1c6d7]" />
-              <input
-                placeholder="Search..."
-                className="flex-1 bg-transparent text-[#e0e2ed] placeholder:text-[#c1c6d7] focus:outline-none"
-              />
+              <span className="text-[#c1c6d7]">Search...</span>
               <kbd className="hidden rounded-md border border-[#414754] bg-[#272a32] px-1.5 py-0.5 text-xs text-[#c1c6d7] md:inline-flex">
                 ⌘K
               </kbd>
-            </div>
+            </button>
 
             <button className="rounded-lg p-2 text-[#c1c6d7] hover:bg-[#272a32]">
               <Bell className="h-5 w-5" />
@@ -200,6 +233,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 overflow-y-auto p-6 md:p-8">{children}</main>
       </div>
+
+      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }

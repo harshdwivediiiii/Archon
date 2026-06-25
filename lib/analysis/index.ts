@@ -296,12 +296,13 @@ export async function runAnalysis(
     await updateProgress("docs", 90);
     const documentation = generateDocumentation(result);
 
+    const sanitizedUrl = cloneUrl.replace(/\/\/oauth2:[^@]*@/, "//oauth2:***@");
     await prisma.document.create({
       data: {
         title: `${fullName} - Architecture Documentation`,
         content: documentation,
         sourceType: "analysis",
-        sourceUrl: cloneUrl,
+        sourceUrl: sanitizedUrl,
         metadata: { repositoryId, analysisType: "architecture" },
         repositoryId,
       },

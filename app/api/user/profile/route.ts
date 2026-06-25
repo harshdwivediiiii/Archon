@@ -15,6 +15,11 @@ export async function GET() {
       name: true,
       email: true,
       image: true,
+      bio: true,
+      company: true,
+      githubUsername: true,
+      location: true,
+      website: true,
       role: true,
       createdAt: true,
       accounts: {

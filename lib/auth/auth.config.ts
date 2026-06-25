@@ -10,8 +10,12 @@ type GitHubEmail = {
 
 type GitHubProfile = {
   avatar_url?: string;
+  bio?: string | null;
+  blog?: string | null;
+  company?: string | null;
   email?: string | null;
   id: number;
+  location?: string | null;
   login: string;
   name?: string | null;
 };
@@ -62,6 +66,11 @@ export const authConfig = {
           name: profile.name ?? profile.login,
           email: profile.email,
           image: profile.avatar_url,
+          bio: profile.bio,
+          company: profile.company,
+          githubUsername: profile.login,
+          location: profile.location,
+          website: profile.blog,
         };
       },
     }),

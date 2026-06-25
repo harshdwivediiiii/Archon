@@ -30,6 +30,11 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  bio           String?
+  company       String?
+  githubUsername String?
+  location      String?
+  website       String?
   role          Role      @default(MEMBER)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Activity,
   BookOpen,
   GitBranch,
   Layers,
@@ -14,6 +13,9 @@ import {
   Plus,
   Server,
   Loader2,
+  AlertTriangle,
+  Database,
+  FileCode,
 } from "lucide-react";
 import { GitHubIcon } from "@/components/ui/github-icon";
 import Link from "next/link";
@@ -33,20 +35,36 @@ interface RepoSummary {
   lastSyncedAt: string | null;
 }
 
+interface DashboardStats {
+  projects: number;
+  repos: number;
+  diagrams: number;
+  services: number;
+  apis: number;
+  databases: number;
+  technologies: string[];
+  securityFindings: number;
+}
+
 export function DashboardClient() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ projects: 0, repos: 0, diagrams: 0 });
+  const [stats, setStats] = useState<DashboardStats>({
+    projects: 0, repos: 0, diagrams: 0,
+    services: 0, apis: 0, databases: 0,
+    technologies: [], securityFindings: 0,
+  });
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        const [projRes, repoRes] = await Promise.all([
+        const [projRes, repoRes, statsRes] = await Promise.all([
           fetch("/api/projects"),
           fetch("/api/repositories"),
+          fetch("/api/dashboard/stats"),
         ]);
         if (cancelled) return;
 
@@ -55,11 +73,10 @@ export function DashboardClient() {
           setProjects(data);
           const repoData = repoRes.ok ? await repoRes.json() : [];
           setRepos(repoData);
-          setStats({
-            projects: data.length,
-            repos: repoData.length,
-            diagrams: data.reduce((a: number, p: Project) => a + p.diagramCount, 0),
-          });
+        }
+        if (statsRes.ok) {
+          const data: DashboardStats = await statsRes.json();
+          setStats(data);
         }
       } catch {
         // ignore
@@ -120,26 +137,91 @@ export function DashboardClient() {
               <Card>
                 <CardContent className="flex items-center justify-between p-6">
                   <div>
-                    <p className="text-sm text-zinc-400">Diagrams</p>
-                    <p className="text-2xl font-bold text-white">{stats.diagrams}</p>
+                    <p className="text-sm text-zinc-400">Services</p>
+                    <p className="text-2xl font-bold text-white">{stats.services}</p>
                   </div>
                   <div className="rounded-lg bg-emerald-600/10 p-3">
-                    <Network className="h-5 w-5 text-emerald-400" />
+                    <Server className="h-5 w-5 text-emerald-400" />
                   </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="flex items-center justify-between p-6">
                   <div>
-                    <p className="text-sm text-zinc-400">Team Members</p>
-                    <p className="text-2xl font-bold text-white">1</p>
+                    <p className="text-sm text-zinc-400">APIs</p>
+                    <p className="text-2xl font-bold text-white">{stats.apis}</p>
                   </div>
-                  <div className="rounded-lg bg-blue-600/10 p-3">
-                    <Activity className="h-5 w-5 text-blue-400" />
+                  <div className="rounded-lg bg-cyan-600/10 p-3">
+                    <Network className="h-5 w-5 text-cyan-400" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="flex items-center justify-between p-6">
+                  <div>
+                    <p className="text-sm text-zinc-400">Databases</p>
+                    <p className="text-2xl font-bold text-white">{stats.databases}</p>
+                  </div>
+                  <div className="rounded-lg bg-amber-600/10 p-3">
+                    <Database className="h-5 w-5 text-amber-400" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="flex items-center justify-between p-6">
+                  <div>
+                    <p className="text-sm text-zinc-400">Diagrams</p>
+                    <p className="text-2xl font-bold text-white">{stats.diagrams}</p>
+                  </div>
+                  <div className="rounded-lg bg-indigo-600/10 p-3">
+                    <Network className="h-5 w-5 text-indigo-400" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="flex items-center justify-between p-6">
+                  <div>
+                    <p className="text-sm text-zinc-400">Technologies</p>
+                    <p className="text-2xl font-bold text-white">{stats.technologies.length}</p>
+                  </div>
+                  <div className="rounded-lg bg-pink-600/10 p-3">
+                    <FileCode className="h-5 w-5 text-pink-400" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="flex items-center justify-between p-6">
+                  <div>
+                    <p className="text-sm text-zinc-400">Security Issues</p>
+                    <p className="text-2xl font-bold text-white">{stats.securityFindings}</p>
+                  </div>
+                  <div className="rounded-lg bg-red-600/10 p-3">
+                    <AlertTriangle className="h-5 w-5 text-red-400" />
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {stats.technologies.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileCode className="h-5 w-5 text-pink-400" />
+                    Detected Technologies
+                  </CardTitle>
+                  <CardDescription>Technologies identified across your repositories</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {stats.technologies.map((tech) => (
+                      <Badge key={tech} variant="secondary" className="text-xs">
+                        {tech}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
