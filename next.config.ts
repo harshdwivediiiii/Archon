@@ -12,7 +12,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "lh3.googleusercontent.com",
+          hostname: "lh3.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.googleusercontent.com",
       },
     ],
   },
@@ -27,7 +31,7 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://avatars.githubusercontent.com https://lh3.googleusercontent.com",
+              "img-src 'self' data: blob: https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://*.googleusercontent.com",
               "font-src 'self' data:",
               "connect-src 'self' https://api.github.com https://o4509384513486848.ingest.us.sentry.io https://app.posthog.com wss:",
               "frame-src 'none'",

@@ -25,6 +25,7 @@ import {
   Bell,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { UserMenu } from "@/components/ui/user-menu";
 
 interface SidebarItem {
   id: string;
@@ -191,7 +192,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <Bell className="h-5 w-5" />
             </button>
 
-            <div className="h-8 w-8 rounded-full border border-[#0070f3]/50 bg-[#272a32]" />
+            <UserMenu />
           </div>
         </header>
 
