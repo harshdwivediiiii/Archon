@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
 
+export const dynamic = "force-dynamic";
+
 async function authorizeRepositoryAccess(repositoryId: string, userId: string) {
   const repo = await prisma.repository.findFirst({
     where: { id: repositoryId },

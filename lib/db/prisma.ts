@@ -32,24 +32,30 @@ function createPool(): Pool {
   });
 }
 
-function createPrismaClient(): PrismaClient {
-  const pool = globalForPrisma.pool ?? createPool();
-  if (!globalForPrisma.pool) {
-    globalForPrisma.pool = pool;
-  }
+export function getPrisma(): PrismaClient {
+  if (globalForPrisma.prisma) return globalForPrisma.prisma;
 
+  const pool = (globalForPrisma.pool ??= createPool());
   const adapter = new PrismaPg(pool);
-  return new PrismaClient({
+  globalForPrisma.prisma = new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
+
+  return globalForPrisma.prisma;
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+export const prisma = new Proxy<PrismaClient>({} as PrismaClient, {
+  get(_target, prop: string | symbol) {
+    if (prop === "then") return undefined;
+    const client = getPrisma();
+    const value = (client as unknown as Record<string | symbol, unknown>)[prop];
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
 
 export async function checkDatabaseConnection(): Promise<{
   ok: boolean;
@@ -58,7 +64,7 @@ export async function checkDatabaseConnection(): Promise<{
 }> {
   const start = Date.now();
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await getPrisma().$queryRaw`SELECT 1`;
     return { ok: true, latencyMs: Date.now() - start };
   } catch (error) {
     return {

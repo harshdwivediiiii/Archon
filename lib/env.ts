@@ -57,10 +57,10 @@ const envSchema = z.object({
     .string()
     .min(32, "AUTH_SECRET must be at least 32 characters")
     .refine((value) => !isPlaceholder(value), "AUTH_SECRET must be a secure random string"),
-  AUTH_GITHUB_ID: z.string().min(1, "AUTH_GITHUB_ID is required"),
-  AUTH_GITHUB_SECRET: z.string().min(1, "AUTH_GITHUB_SECRET is required"),
-  AUTH_GOOGLE_ID: z.string().min(1, "AUTH_GOOGLE_ID is required"),
-  AUTH_GOOGLE_SECRET: z.string().min(1, "AUTH_GOOGLE_SECRET is required"),
+  AUTH_GITHUB_ID: z.string().optional().default(""),
+  AUTH_GITHUB_SECRET: z.string().optional().default(""),
+  AUTH_GOOGLE_ID: z.string().optional().default(""),
+  AUTH_GOOGLE_SECRET: z.string().optional().default(""),
   AUTH_URL: z
     .string()
     .url("AUTH_URL must be a valid URL")
@@ -70,13 +70,13 @@ const envSchema = z.object({
       "AUTH_URL must be a real URL, not a placeholder"
     ),
   OPENAI_API_KEY: z.string().optional().default(""),
-  STRIPE_SECRET_KEY: z.string(),
-  STRIPE_WEBHOOK_SECRET: z.string(),
-  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string(),
-  RESEND_API_KEY: z.string(),
-  NEXT_PUBLIC_POSTHOG_KEY: z.string(),
-  NEXT_PUBLIC_POSTHOG_HOST: z.string().url("NEXT_PUBLIC_POSTHOG_HOST must be a valid URL"),
-  SENTRY_DSN: z.string(),
+  STRIPE_SECRET_KEY: z.string().optional().default(""),
+  STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional().default(""),
+  RESEND_API_KEY: z.string().optional().default(""),
+  NEXT_PUBLIC_POSTHOG_KEY: z.string().optional().default(""),
+  NEXT_PUBLIC_POSTHOG_HOST: z.string().url("NEXT_PUBLIC_POSTHOG_HOST must be a valid URL").optional().default("https://app.posthog.com"),
+  SENTRY_DSN: z.string().optional().default(""),
   NEXT_PUBLIC_APP_URL: z.string().url("NEXT_PUBLIC_APP_URL must be a valid URL").optional().or(z.literal("")),
   OPENAI_MODEL: z.string().optional(),
   STORAGE_PATH: z.string().optional(),

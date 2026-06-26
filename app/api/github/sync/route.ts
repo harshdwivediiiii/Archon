@@ -3,6 +3,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
 import { runAnalysis } from "@/lib/analysis";
 import { publishProgress } from "@/lib/analysis/progress";
+import { simpleGit } from "simple-git";
+
+export const dynamic = "force-dynamic";
+
+const GIT_CLONE_BASE = "/tmp/repo-clones";
 
 export async function POST(req: NextRequest) {
   const session = await auth();

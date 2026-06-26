@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { getOpenAI } from "@/lib/ai/openai";
 import { getEnv } from "@/lib/env";
 
+export const dynamic = "force-dynamic";
+
 const SYSTEM_PROMPT = `You are Archon AI, an expert architecture intelligence assistant. You help developers understand complex systems by:
 
 1. Explaining architecture patterns and designs

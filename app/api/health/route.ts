@@ -3,9 +3,12 @@ import { runHealthChecks } from "@/lib/health/diagnostics";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const report = await runHealthChecks();
+    const url = new URL(request.url);
+    const skipExternal = url.searchParams.get("full") !== "true";
+
+    const report = await runHealthChecks({ skipExternal });
     const statusCode =
       report.status === "failed" ? 503 : report.status === "warning" ? 200 : 200;
 

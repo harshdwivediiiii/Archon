@@ -1,33 +1,46 @@
-FROM node:20-alpine AS base
+FROM node:22-bookworm-slim AS deps
 
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
 
-FROM base AS builder
+COPY package*.json ./
+
+RUN npm ci --ignore-scripts
+
+FROM node:22-bookworm-slim AS builder
+
+RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN npx prisma generate && npm run build
 
-FROM base AS runner
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npx prisma generate
+RUN npm run build
+
+FROM node:22-bookworm-slim AS runner
+
 WORKDIR /app
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN groupadd -r nodejs && useradd -r -g nodejs nextjs
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY scripts/validate-env.js ./validate-env.js
+COPY scripts/entrypoint.sh ./entrypoint.sh
+
+RUN mkdir -p /tmp/.next/cache /app/.next/standalone/archon/storage/uploads /app/storage/uploads && chown -R nextjs:nodejs /tmp /app/.next/standalone/archon/storage /app/storage
 
 USER nextjs
 
 EXPOSE 3000
-ENV PORT=3000
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["./entrypoint.sh"]

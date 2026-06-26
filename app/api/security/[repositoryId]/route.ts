@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
 import { scanForSecrets, classifyEnvironmentVariables, type SecurityFindingResult } from "@/lib/analysis/security";
 
+export const dynamic = "force-dynamic";
+
 async function checkRepositoryAccess(repositoryId: string, userId: string) {
   const repo = await prisma.repository.findFirst({
     where: { id: repositoryId },

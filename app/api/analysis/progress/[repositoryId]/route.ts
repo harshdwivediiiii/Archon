@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db/prisma";
 import { subscribeToAnalysis } from "@/lib/analysis/progress";
 import type { AnalysisProgress } from "@/lib/analysis/types";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ repositoryId: string }> }

@@ -1,14 +1,10 @@
 import NextAuth, { type Session } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "@/lib/db/prisma";
+import { getPrisma } from "@/lib/db/prisma";
 import { getEnv } from "@/lib/env";
 import { authConfig } from "./auth.config";
 import { NextResponse } from "next/server";
 
-/**
- * Log auth environment status at startup.
- * Never throws — allows partial OAuth config (GitHub only, Google only, neither).
- */
 function logAuthEnv(): void {
   const googleOk = !!process.env.AUTH_GOOGLE_ID && !!process.env.AUTH_GOOGLE_SECRET;
   const githubOk = !!process.env.AUTH_GITHUB_ID && !!process.env.AUTH_GITHUB_SECRET;
@@ -39,74 +35,91 @@ function logAuthEnv(): void {
   console.log("[auth] VERCEL_URL:", process.env.VERCEL_URL ?? "not set");
 }
 
-logAuthEnv();
-
-let handlers: {
-  GET: (req: Request, ctx?: unknown) => Promise<Response>;
-  POST: (req: Request, ctx?: unknown) => Promise<Response>;
-} = {
-  GET: async () => new Response("Auth loading", { status: 503 }),
-  POST: async () => new Response("Auth loading", { status: 503 }),
+type AuthModule = {
+  handlers: {
+    GET: (req: any, ctx?: unknown) => Promise<Response>;
+    POST: (req: any, ctx?: unknown) => Promise<Response>;
+  };
+  signIn: (...args: any[]) => Promise<void>;
+  signOut: (...args: any[]) => Promise<void>;
+  auth: () => Promise<Session | null>;
 };
-let signIn: (...args: unknown[]) => Promise<void> = async () => {};
-let signOut: (...args: unknown[]) => Promise<void> = async () => {};
-let auth: () => Promise<Session | null> = async () => null;
 
-try {
-  const env = getEnv();
+let _module: AuthModule | null = null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const authResult: any = NextAuth({
-    ...authConfig,
-    adapter: PrismaAdapter(prisma),
-    secret: env.AUTH_SECRET,
-    session: { strategy: "database" },
-    providers: authConfig.providers,
-    callbacks: {
-      ...authConfig.callbacks,
-      async session({ session, user }) {
-        if (session.user) {
-          session.user.id = user.id;
-        }
-        return session;
-      },
-    },
-    debug: process.env.NODE_ENV === "development",
-  });
+function getAuth(): AuthModule {
+  if (_module) return _module;
 
-  handlers = authResult.handlers as typeof handlers;
-  signIn = authResult.signIn as typeof signIn;
-  signOut = authResult.signOut as typeof signOut;
-  auth = authResult.auth as typeof auth;
+  logAuthEnv();
 
-  console.log("[auth] Auth.js initialized successfully");
-} catch (error) {
-  const msg = error instanceof Error ? error.message : String(error);
-  console.error("[auth] Auth initialization failed:", msg);
+  try {
+    const env = getEnv();
 
-  const degradedHandler = () =>
-    Promise.resolve(
-      NextResponse.json(
-        {
-          error: "Authentication is not configured",
-          message: msg,
-          hint: "Set the required environment variables in your Vercel project dashboard.",
+    const authResult: {
+      handlers: AuthModule["handlers"];
+      signIn: AuthModule["signIn"];
+      signOut: AuthModule["signOut"];
+      auth: AuthModule["auth"];
+    } = NextAuth({
+      ...authConfig,
+      adapter: PrismaAdapter(getPrisma()),
+      secret: env.AUTH_SECRET,
+      session: { strategy: "database" },
+      callbacks: {
+        ...authConfig.callbacks,
+        async session({ session, user }) {
+          if (session.user) {
+            session.user.id = user.id;
+          }
+          return session;
         },
-        { status: 500 }
-      )
-    );
+      },
+      debug: process.env.NODE_ENV === "development",
+    });
 
-  handlers = {
-    GET: degradedHandler,
-    POST: degradedHandler,
-  };
-  signIn = async () => {
-    throw new Error("Auth not configured: " + msg);
-  };
-  signOut = async () => {
-    throw new Error("Auth not configured: " + msg);
-  };
-  auth = async () => null;
+    _module = {
+      handlers: authResult.handlers,
+      signIn: authResult.signIn,
+      signOut: authResult.signOut,
+      auth: authResult.auth,
+    };
+    console.log("[auth] Auth.js initialized successfully");
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[auth] Auth initialization failed:", msg);
+
+    const degradedHandler = () =>
+      Promise.resolve(
+        NextResponse.json(
+          {
+            error: "Authentication is not configured",
+            message: msg,
+            hint: "Set the required environment variables in your Vercel project dashboard.",
+          },
+          { status: 500 }
+        )
+      );
+
+    _module = {
+      handlers: { GET: degradedHandler, POST: degradedHandler },
+      signIn: async () => {
+        throw new Error("Auth not configured: " + msg);
+      },
+      signOut: async () => {
+        throw new Error("Auth not configured: " + msg);
+      },
+      auth: async () => null,
+    };
+  }
+
+  return _module;
 }
 
-export { handlers, signIn, signOut, auth };
+export const handlers = {
+  GET: (req: Request, ctx?: unknown) => getAuth().handlers.GET(req, ctx),
+  POST: (req: Request, ctx?: unknown) => getAuth().handlers.POST(req, ctx),
+};
+
+export const signIn = (...args: unknown[]) => getAuth().signIn(...args);
+export const signOut = (...args: unknown[]) => getAuth().signOut(...args);
+export const auth = () => getAuth().auth();

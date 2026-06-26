@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db/prisma";
 import { runAnalysis } from "@/lib/analysis";
 import { publishProgress } from "@/lib/analysis/progress";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const event = req.headers.get("x-github-event");
