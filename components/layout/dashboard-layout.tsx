@@ -23,6 +23,16 @@ import {
   Users,
   X,
   Bell,
+  MessageSquare,
+  BarChart3,
+  Code2,
+  Container,
+  Ship,
+  GitCompare,
+  Shield,
+  FileText,
+  Wrench,
+  Database,
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { UserMenu } from "@/components/ui/user-menu";
@@ -36,22 +46,66 @@ interface SidebarItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const sidebarItems: SidebarItem[] = [
-  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { id: "projects", label: "Projects", href: "/dashboard/projects", icon: BookOpen },
-  { id: "repositories", label: "Repositories", href: "/dashboard/repositories", icon: GitBranch },
-  { id: "architecture", label: "Architecture", href: "/dashboard/architecture", icon: Network },
-  { id: "knowledge-graph", label: "Knowledge Graph", href: "/dashboard/knowledge-graph", icon: Sparkles },
-  { id: "repository-galaxy", label: "Repository Galaxy", href: "/dashboard/repository-galaxy", icon: Telescope },
-  { id: "ai-assistant", label: "AI Assistant", href: "/dashboard/ai-assistant", icon: BrainCircuit },
-  { id: "timeline", label: "Timeline", href: "/dashboard/timeline", icon: History },
-  { id: "team", label: "Team", href: "/dashboard/team", icon: Users },
-  { id: "billing", label: "Billing", href: "/dashboard/billing", icon: CreditCard },
+interface SidebarSection {
+  title: string;
+  items: SidebarItem[];
+}
+
+const sidebarSections: SidebarSection[] = [
+  {
+    title: "Overview",
+    items: [
+      { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { id: "projects", label: "Projects", href: "/dashboard/projects", icon: BookOpen },
+      { id: "repositories", label: "Repositories", href: "/dashboard/repositories", icon: GitBranch },
+    ],
+  },
+  {
+    title: "Intelligence",
+    items: [
+      { id: "chat", label: "Chat", href: "/dashboard/chat", icon: MessageSquare },
+      { id: "ai-assistant", label: "AI Assistant", href: "/dashboard/ai-assistant", icon: BrainCircuit },
+      { id: "architecture", label: "Architecture", href: "/dashboard/architecture", icon: Network },
+      { id: "knowledge-graph", label: "Knowledge Graph", href: "/dashboard/knowledge-graph", icon: Sparkles },
+      { id: "repository-galaxy", label: "Repository Galaxy", href: "/dashboard/repository-galaxy", icon: Telescope },
+    ],
+  },
+  {
+    title: "Development",
+    items: [
+      { id: "code-review", label: "Code Review", href: "/dashboard/code-review", icon: Code2 },
+      { id: "analytics", label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+      { id: "documentation", label: "Documentation", href: "/dashboard/documentation", icon: FileText },
+    ],
+  },
+  {
+    title: "Infrastructure",
+    items: [
+      { id: "kubernetes", label: "Kubernetes", href: "/dashboard/kubernetes", icon: Container },
+      { id: "docker", label: "Docker", href: "/dashboard/docker", icon: Ship },
+      { id: "devops", label: "DevOps", href: "/dashboard/devops", icon: GitCompare },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      { id: "security", label: "Security", href: "/dashboard/security", icon: Shield },
+      { id: "database", label: "Database", href: "/dashboard/database", icon: Database },
+      { id: "timeline", label: "Timeline", href: "/dashboard/timeline", icon: History },
+    ],
+  },
+  {
+    title: "Administration",
+    items: [
+      { id: "team", label: "Team", href: "/dashboard/team", icon: Users },
+      { id: "billing", label: "Billing", href: "/dashboard/billing", icon: CreditCard },
+      { id: "settings", label: "Settings", href: "/dashboard/settings", icon: Settings },
+      { id: "notifications", label: "Notifications", href: "/dashboard/notifications", icon: Bell },
+    ],
+  },
 ];
 
-const bottomItems: SidebarItem[] = [
-  { id: "settings", label: "Settings", href: "/dashboard/settings", icon: Settings },
-];
+const bottomItems: SidebarItem[] = [];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -121,49 +175,37 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3 pb-4">
-          <div className="space-y-1">
-            {sidebarItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    isActive
-                      ? "border-l-2 border-[#0070f3] bg-[#0070f3]/5 font-semibold text-[#0070f3]"
-                      : "text-[#c1c6d7] hover:bg-[#272a32] hover:text-[#e0e2ed]"
-                  )}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="mt-auto space-y-1 pt-4">
-            {bottomItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    isActive
-                      ? "border-l-2 border-[#0070f3] bg-[#0070f3]/5 font-semibold text-[#0070f3]"
-                      : "text-[#c1c6d7] hover:bg-[#272a32] hover:text-[#e0e2ed]"
-                  )}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
+        <div className="flex-1 overflow-y-auto px-3 pb-4">
+          <nav className="flex flex-col gap-4">
+            {sidebarSections.map((section) => (
+              <div key={section.title}>
+                <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">
+                  {section.title}
+                </p>
+                <div className="space-y-0.5">
+                  {section.items.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                          isActive
+                            ? "border-l-2 border-[#0070f3] bg-[#0070f3]/5 font-semibold text-[#0070f3]"
+                            : "text-[#c1c6d7] hover:bg-[#272a32] hover:text-[#e0e2ed]"
+                        )}
+                      >
+                        <item.icon className="h-4.5 w-4.5 shrink-0" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </div>
 
         <div className="mx-3 mb-3 rounded-xl border border-[#6807ba] bg-white/[0.04] p-4 backdrop-blur-sm">
           <div className="mb-2 flex items-center gap-2">

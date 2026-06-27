@@ -50,6 +50,7 @@ model User {
   usageRecords        UsageRecord[]
   invitationsSent     Invitation[]  @relation("SentInvitations")
   ownedWorkspaces     Workspace[]   @relation("WorkspaceOwner")
+  notifications       Notification[]
 
   @@map("users")
 }
@@ -419,6 +420,25 @@ enum SecurityCategory {
   UNSAFE_CONFIG
   PUBLIC_RESOURCE
   PRIVILEGE_ESCALATION
+}
+
+model Notification {
+  id          String                    @id @default(cuid())
+  type        String
+  priority    String                    @default("medium")
+  title       String
+  description String?                   @db.Text
+  read        Boolean                   @default(false)
+  link        String?
+  metadata    Json?
+  createdAt   DateTime                  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
 model SecurityFinding {

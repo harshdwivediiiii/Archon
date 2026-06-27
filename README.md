@@ -4,138 +4,108 @@
 
 <div align="center">
 
-# 🏛️ Archon
+# 🏛️ Archon — AI-Powered Developer Platform
 
-**AI-Powered Engineering Intelligence Platform**
+**Transform any repository into a complete AI-powered developer experience.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
 [![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql)](https://www.postgresql.org)
 [![OpenAI](https://img.shields.io/badge/OpenAI_GPT--4o-412991?style=flat-square&logo=openai)](https://openai.com)
-[![React Flow](https://img.shields.io/badge/React_Flow-11-FF0072?style=flat-square&logo=react)](https://reactflow.dev)
-[![Stitch MCP](https://img.shields.io/badge/Stitch_MCP-4285F4?style=flat-square&logo=google)](https://stitch.mcp)
-[![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel)](https://vercel.com)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=flat-square&logo=kubernetes)](https://kubernetes.io)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker)](https://docker.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 <br />
 
-**Transform any repository into a living architecture intelligence system.**
-
-Archon ingests codebases via GitHub OAuth, runs a multi-stage AI-powered analysis engine, and generates interactive architecture diagrams, knowledge graphs, infrastructure blueprints, dependency maps, and comprehensive documentation — turning complex codebases into understandable, navigable systems.
-
-</div>
-
-<br />
-
----
-
-## 🎥 Product Demo
-
-<p align="center">
-  <img src="./public/image.png" alt="Archon Demo" width="100%">
-</p>
-
-<p align="center">
-  <em>Live repository analysis, architecture generation, and AI-powered insights.</em>
-</p>
-
----
-
-## ✨ Features
-
-<div align="center">
-
-| 🧠 Intelligence | 🏗️ Architecture | 🔬 Analysis |
-|:---|---:|:---|
-| **AI Architecture Analysis** — Pattern classification, tech stack enrichment, design recommendations | **System Architecture Diagrams** — Interactive layered diagrams with React Flow | **Repository Intelligence** — Deep codebase scanning with AST parsing |
-| **AI Copilot** — Conversational assistant for architecture questions | **UML Generation** — Class, interface, and relationship diagrams | **Technology Detection** — 40+ frameworks, languages, and tools |
-| **Knowledge Graph** — Entity-relationship graph from code analysis | **Data Flow Visualization** — Request, event, and message flow maps | **Dependency Mapping** — Internal, external, circular, and dead deps |
-| **Security Scanning** — Automated secret detection and risk classification | **DevOps Intelligence** — Docker, K8s, Terraform, CI/CD discovery | **Impact Analysis** — Blast radius and risk scoring for every service |
-| **Documentation Engine** — Auto-generated README, API, and architecture docs | **Architecture Timeline** — Version-controlled snapshot comparison | **API Detection** — REST, GraphQL, WebSocket, gRPC endpoint discovery |
+**A unified AI-powered developer platform combining architecture intelligence, Kubernetes management, Docker operations, CI/CD pipelines, security scanning, code review, and developer tools — all in one place.**
 
 </div>
 
 ---
 
-## 🔄 How It Works
+## ✨ Platform Features
 
-```
-  Connect Repository (GitHub OAuth)
-          │
-          ▼
-    Repository Analysis
-  ┌─────────────────────────────────────┐
-  │ • Shallow clone (simple-git)        │
-  │ • File walker traverses codebase    │
-  │ • AST parsing (TS, JS, Python,      │
-  │   Go, Rust, Java)                   │
-  └─────────────────────────────────────┘
-          │
-          ▼
-    Technology Detection
-  ┌─────────────────────────────────────┐
-  │ • Frontend: Next.js, React, Vue,    │
-  │   Angular, Svelte, Vite             │
-  │ • Backend: Express, NestJS, Django, │
-  │   Flask, FastAPI, Rails, Laravel    │
-  │ • Database: Postgres, MySQL,        │
-  │   MongoDB, Redis, SQLite, ES        │
-  │ • Infra: Docker, K8s, Terraform,    │
-  │   AWS, Azure, GCP, CI/CD            │
-  └─────────────────────────────────────┘
-          │
-          ▼
-    Architecture Generation
-  ┌─────────────────────────────────────┐
-  │ • Service detection & classification│
-  │ • Dependency graph construction     │
-  │ • Layer-based layout (7 layers)     │
-  │ • React Flow diagram generation     │
-  └─────────────────────────────────────┘
-          │
-          ▼
-    Knowledge Graph Creation
-  ┌─────────────────────────────────────┐
-  │ • Entity extraction (services,      │
-  │   APIs, databases, modules)         │
-  │ • Relationship mapping (imports,    │
-  │   calls, dependencies, deployments) │
-  │ • Persistent graph storage          │
-  └─────────────────────────────────────┘
-          │
-          ▼
-    AI Insights (OpenAI GPT-4o)
-  ┌─────────────────────────────────────┐
-  │ • Architecture pattern classification│
-  │ • Technology stack enrichment        │
-  │ • Design recommendations            │
-  │ • Service description enrichment    │
-  │ • Complexity & scalability rating   │
-  └─────────────────────────────────────┘
-          │
-          ▼
-    Documentation Generation
-  ┌─────────────────────────────────────┐
-  │ • Architecture overview             │
-  │ • Service documentation             │
-  │ • API reference                     │
-  │ • Database documentation            │
-  │ • Infrastructure overview           │
-  └─────────────────────────────────────┘
-```
+### 🧠 AI Intelligence
+| Feature | Description |
+|---------|-------------|
+| **AI Repository Chat** | RAG-powered chat that understands your codebase — ask about architecture, find code, generate docs |
+| **Semantic Code Search** | Search by meaning instead of keywords — find authentication logic, API routes, database connections |
+| **AI Code Review** | Automated review of PRs, commits, and files — detects bugs, security issues, performance problems |
+| **AI Documentation** | Auto-generate README, API docs, architecture docs, deployment guides, and release notes |
+| **AI Architecture Analysis** | Pattern classification, tech stack enrichment, design recommendations |
+| **Knowledge Graph** | Entity-relationship graph from code analysis with interactive visualization |
+
+### 🏗️ Infrastructure Management
+| Feature | Description |
+|---------|-------------|
+| **Kubernetes Dashboard** | Lens-like interface — manage pods, deployments, services, ingress, secrets, configmaps, with metrics, logs, YAML editor, and AI troubleshooting |
+| **Docker Dashboard** | Manage images, containers, volumes, networks — with stats, logs, terminal access, and cleanup |
+| **DevOps Dashboard** | CI/CD pipeline tracking, deployment history, environment variables, secrets manager, build artifacts |
+
+### 🔬 Analysis & Insights
+| Feature | Description |
+|---------|-------------|
+| **Repository Analytics** | Language distribution, lines of code, commit frequency, contributor activity, code ownership, churn, technical debt |
+| **Security Center** | Dependency scanning, secret detection, container image scanning, OWASP recommendations, license checking |
+| **Database Dashboard** | Prisma schema viewer, table browser, relationship explorer, migration history, query runner |
+| **Architecture Visualization** | Interactive system architecture, dependency graphs, API graphs, ER diagrams, call graphs |
+
+### 🛠️ Developer Tools
+| Feature | Description |
+|---------|-------------|
+| **Regex Tester** | Test regular expressions in real-time |
+| **JSON/YAML Formatter** | Format, validate, and beautify JSON and YAML |
+| **Base64 Encoder/Decoder** | Encode and decode Base64 strings |
+| **JWT Decoder** | Inspect JWT tokens — decode header, payload, and signature |
+| **UUID Generator** | Generate UUID v4 and v7 |
+| **Hash Generator** | Generate MD5, SHA1, SHA256, SHA512 hashes |
+| **Cron Parser** | Parse cron expressions with human-readable descriptions |
+| **SQL Formatter** | Format and beautify SQL queries |
+
+### 🔔 Operations
+| Feature | Description |
+|---------|-------------|
+| **Notification Center** | Centralized notifications for GitHub events, deployments, security alerts, build failures, container crashes |
+| **Global Search** | Search across repositories, files, functions, issues, PRs, commits, containers, pods, secrets, deployments |
+| **Command Palette** | ⌘K quick access to all features and navigation |
+| **Observability** | Structured logging, distributed tracing, metrics collection, health checks |
 
 ---
 
-## 🏗️ Architecture Workspace
+## 📊 Dashboard Overview
 
-<p align="center">
-  <img src="./public/image.png" alt="Architecture Workspace" width="100%">
-</p>
+The main dashboard provides at-a-glance visibility into your entire development ecosystem:
 
-<p align="center">
-  <em>Enterprise-grade architecture canvas with infinite zoom, pan, minimap, and 10 visualization modes.</em>
-</p>
+- **Health Score** — Overall project and infrastructure health
+- **Security Score** — Vulnerability and compliance status
+- **AI Score** — AI-powered code quality and architecture rating
+- **Repository Status** — Connected repos, sync status, analysis progress
+- **Quick Actions** — New chat, code review, analytics, security scan
+
+---
+
+## 🔄 Architecture Pipeline
+
+```
+Repository Import (GitHub OAuth)
+        │
+        ▼
+  Analysis Pipeline
+  ┌─────────────────────────────────┐
+  │ Clone → File Walk → AST Parse   │
+  │ → Detect Tech → Build Graph     │
+  │ → AI Analysis → Generate Docs   │
+  └─────────────────────────────────┘
+        │
+        ▼
+  Platform Capabilities
+  ┌──────────────────────────────────────────────────┐
+  │  Architecture  │  Kubernetes  │  Docker  │  DevOps │
+  │  Chat & Search │  Code Review │ Security │  Tools  │
+  └──────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -144,10 +114,12 @@ Archon ingests codebases via GitHub OAuth, runs a multi-stage AI-powered analysi
 ### Prerequisites
 
 - **Node.js** 18+
-- **PostgreSQL** 14+
+- **PostgreSQL** 14+ (with pgvector)
 - **GitHub OAuth App** — For authentication
 - **Google OAuth App** — For authentication
 - **OpenAI API Key** — For AI features
+- **Docker** (optional) — For container management features
+- **kubectl** (optional) — For Kubernetes management features
 
 ### Installation
 
@@ -173,135 +145,130 @@ npm run dev
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
----
+### Docker
 
-## 🔐 Environment Variables
+```bash
+docker compose up -d
+```
 
-> All variables are **required** unless marked as optional. Never commit `.env` to version control.
+### Kubernetes
 
-| Variable | Required | Description |
-|----------|:--------:|-------------|
-| `DATABASE_URL` | ✅ | PostgreSQL connection URL (supports pgBouncer) |
-| `DIRECT_DATABASE_URL` | ❌ | Direct URL for Prisma migrations (non-pooled) |
-| `AUTH_SECRET` | ✅ | Auth.js secret (min 32 chars). Generate with `openssl rand -base64 32` |
-| `AUTH_URL` | ❌ | Canonical URL for Auth.js callbacks |
-| `AUTH_GITHUB_ID` | ✅ | GitHub OAuth Client ID |
-| `AUTH_GITHUB_SECRET` | ✅ | GitHub OAuth Client Secret |
-| `AUTH_GOOGLE_ID` | ✅ | Google OAuth Client ID |
-| `AUTH_GOOGLE_SECRET` | ✅ | Google OAuth Client Secret |
-| `OPENAI_API_KEY` | ✅ | OpenAI API key |
-| `OPENAI_MODEL` | ❌ | Model identifier (default: `gpt-4o`) |
-| `STRIPE_SECRET_KEY` | ❌ | Stripe secret key for billing |
-| `STRIPE_WEBHOOK_SECRET` | ❌ | Stripe webhook signing secret |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | ❌ | Stripe publishable key |
-| `RESEND_API_KEY` | ❌ | Resend API key for email invitations |
-| `R2_ACCOUNT_ID` | ❌ | Cloudflare R2 account ID |
-| `R2_ACCESS_KEY_ID` | ❌ | Cloudflare R2 access key |
-| `R2_SECRET_ACCESS_KEY` | ❌ | Cloudflare R2 secret key |
-| `R2_BUCKET` | ❌ | Cloudflare R2 bucket name |
-| `NEXT_PUBLIC_POSTHOG_KEY` | ❌ | PostHog project API key |
-| `NEXT_PUBLIC_POSTHOG_HOST` | ❌ | PostHog host URL |
-| `SENTRY_DSN` | ❌ | Sentry DSN for error tracking |
-| `NEXT_PUBLIC_APP_URL` | ✅ | Public URL (e.g., `https://archon.dev`) |
+```bash
+kubectl apply -f k8s/namespace.yaml
+kubectl create secret generic archon-secrets --from-env-file=.env
+kubectl apply -f k8s/
+```
 
 ---
 
-## 📸 Screenshots
+## 🗺️ API Reference
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><strong>Dashboard Overview</strong></td>
-      <td align="center"><strong>Architecture Diagram</strong></td>
-    </tr>
-    <tr>
-      <td><img src="./public/image.png" alt="Dashboard" width="400"></td>
-      <td><img src="./public/image.png" alt="Architecture" width="400"></td>
-    </tr>
-    <tr>
-      <td align="center"><strong>Knowledge Graph</strong></td>
-      <td align="center"><strong>AI Assistant</strong></td>
-    </tr>
-    <tr>
-      <td><img src="./public/image.png" alt="Knowledge Graph" width="400"></td>
-      <td><img src="./public/image.png" alt="AI Assistant" width="400"></td>
-    </tr>
-  </table>
-</div>
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-| Technology | Purpose |
-|------------|---------|
-| **Next.js 16** (App Router) | Full-stack framework, server components, API routes |
-| **React 19** | UI library |
-| **Tailwind CSS** | Utility-first styling |
-| **shadcn/ui** (Radix Primitives) | Accessible UI components |
-| **@xyflow/react** (React Flow) | Interactive architecture diagrams |
-| **Framer Motion** | Page animations and transitions |
-| **Recharts** | Charts and statistics |
-| **Lucide React** | Icon library |
-
-### Backend & Database
-| Technology | Purpose |
-|------------|---------|
-| **Next.js API Routes** | REST API endpoints |
-| **TypeScript** (strict mode) | End-to-end type safety |
-| **Auth.js v5** (NextAuth) | Authentication with Prisma adapter |
-| **PostgreSQL 16** | Primary database |
-| **Prisma 7** | ORM with pgBouncer support |
-| **Zod** | Runtime validation |
-
-### AI & Analysis
-| Technology | Purpose |
-|------------|---------|
-| **OpenAI GPT-4o / GPT-4o-mini** | Architecture analysis, chat, graph generation |
-| **simple-git** | Repository cloning (shallow, depth=1) |
-| **TypeScript Compiler API** | AST parsing for `.ts`/`.tsx` |
-| **@babel/parser** | AST parsing for `.js`/`.jsx` |
+### Intelligence
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/ai/chat` | Streaming AI chat with repository context |
+| POST | `/api/semantic-search` | Semantic code search by meaning |
+| POST | `/api/code-review` | Review code, PRs, or files for issues |
+| POST | `/api/code-review/analyze-file` | Analyze a single file |
+| POST | `/api/docs` | Generate documentation |
 
 ### Infrastructure
-| Technology | Purpose |
-|------------|---------|
-| **Docker** | Local development with `docker-compose` |
-| **Vercel** | Primary deployment target |
-| **Cloudflare R2** | File storage for analysis artifacts |
-| **Stripe** | Subscription billing (Free/Pro/Team/Enterprise) |
-| **Resend** | Email delivery for team invitations |
-| **Sentry** | Error tracking and monitoring |
-| **PostHog** | Product analytics |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/kubernetes/namespaces` | List all namespaces |
+| GET | `/api/kubernetes/pods` | List pods (query: namespace) |
+| GET | `/api/kubernetes/deployments` | List deployments |
+| POST | `/api/kubernetes/deployments` | Scale deployment |
+| GET | `/api/kubernetes/services` | List services |
+| GET | `/api/kubernetes/events` | List events |
+| GET | `/api/kubernetes/metrics` | Resource metrics |
+| GET | `/api/docker/images` | List Docker images |
+| GET | `/api/docker/containers` | List containers |
+| PATCH | `/api/docker/containers/[id]` | Start/stop/restart container |
+| GET | `/api/docker/containers/[id]/logs` | Container logs |
+| GET | `/api/docker/containers/[id]/stats` | Container stats |
+| GET | `/api/docker/volumes` | List volumes |
+| GET | `/api/docker/networks` | List networks |
+
+### Analytics & Security
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/analytics` | Repository analytics (language, LOC, commits, contributors) |
+| GET | `/api/security` | Security overview and scan results |
+| POST | `/api/security/secrets` | Scan content for secrets |
+| GET | `/api/database` | Database overview and health |
+| GET | `/api/database/tables` | List database tables |
+| POST | `/api/database/query` | Run safe SELECT queries |
+
+### Operations
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/notifications` | User notifications |
+| POST | `/api/notifications` | Mark notifications as read |
+| GET | `/api/devops` | CI/CD and deployment overview |
+| POST | `/api/devtools` | Developer tools (regex, JSON, JWT, etc.) |
+| GET | `/api/dashboard/stats` | Enhanced dashboard statistics |
+
+### Core
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/auth/me` | Current user profile |
+| GET/POST | `/api/workspace` | Workspace management |
+| GET/POST | `/api/projects` | Project CRUD |
+| GET | `/api/repositories` | Imported repositories |
+| POST | `/api/github/sync` | Trigger repository sync |
+| GET | `/api/search` | Global search |
+| GET | `/api/health` | System diagnostics |
 
 ---
 
-## 📁 Project Structure
+## 🧩 Architecture
+
+### Module Structure
 
 ```
 archon/
 ├── app/                           # Next.js App Router
-│   ├── dashboard/                 # Protected dashboard pages
-│   │   ├── architecture/          # Interactive React Flow diagrams (10 modes)
-│   │   ├── knowledge-graph/       # Entity-relationship graph visualization
-│   │   ├── ai-assistant/          # Streaming AI chat interface
-│   │   ├── timeline/              # Architecture change timeline
+│   ├── dashboard/                 # 20+ protected dashboard pages
+│   │   ├── analytics/             # Repository analytics
+│   │   ├── chat/                  # AI repository chat
+│   │   ├── code-review/           # PR and file code review
+│   │   ├── kubernetes/            # Lens-like K8s dashboard
+│   │   ├── docker/                # Docker management
+│   │   ├── devops/                # CI/CD pipeline management
+│   │   ├── security/              # Security center
+│   │   ├── documentation/         # AI documentation generator
+│   │   ├── database/              # Prisma database dashboard
+│   │   ├── developer-tools/       # Regex, JSON, JWT, etc.
+│   │   ├── notifications/         # Notification center
+│   │   ├── search/                # Global search
+│   │   ├── architecture/          # Interactive React Flow diagrams
+│   │   ├── knowledge-graph/       # Entity-relationship graph
+│   │   ├── ai-assistant/          # Streaming AI chat
+│   │   ├── timeline/              # Architecture timeline
 │   │   ├── repositories/          # GitHub import + analysis
-│   │   ├── projects/              # Project CRUD
-│   │   ├── team/                  # Team management + invitations
-│   │   ├── billing/               # Stripe subscription management
-│   │   ├── settings/              # User profile settings
-│   │   ├── impact/                # Blast radius impact analysis
-│   │   ├── profile/               # User profile (GitHub/Google data)
-│   │   └── client.tsx             # Dashboard overview with real stats
-│   ├── api/                       # REST API routes
-│   └── page.tsx                   # Landing page
+│   │   ├── projects/              # Project management
+│   │   ├── team/                  # Team management
+│   │   ├── billing/               # Subscription management
+│   │   ├── settings/              # User settings
+│   │   └── impact/                # Blast radius analysis
+│   └── api/                       # 40+ REST API endpoints
 ├── components/
-│   ├── layout/                    # Dashboard sidebar + header
+│   ├── layout/                    # Dashboard sidebar + header + search
 │   ├── landing/                   # Landing page sections
-│   ├── ui/                        # shadcn/ui components
+│   ├── ui/                        # 30+ shadcn/ui components
 │   └── providers/                 # Session provider
 ├── lib/
+│   ├── kubernetes/                # Kubernetes client (kubectl wrapper)
+│   ├── docker/                    # Docker client (Docker CLI wrapper)
+│   ├── notifications/             # Notification center service
+│   ├── observability/             # Logger, tracer, metrics, health
+│   ├── codereview/                # Pattern-based code review engine
+│   ├── semantic-search/           # Semantic code search engine
+│   ├── analytics/                 # Repository analytics engine
+│   ├── security/                  # Security scanning engine
+│   ├── documentation/             # AI documentation generator
+│   ├── devtools/                  # Developer tools (regex, JWT, cron, etc.)
 │   ├── auth/                      # Auth.js configuration
 │   ├── analysis/                  # Core analysis engine
 │   │   ├── detectors/             # 7 technology detectors
@@ -312,81 +279,62 @@ archon/
 │   │   ├── security.ts            # Secret scanning engine
 │   │   └── clone.ts               # Git clone with timeout
 │   ├── ai/                        # OpenAI integration
-│   │   ├── chat.ts                # Streaming chat
-│   │   ├── architecture-analyzer.ts # Pattern classification
-│   │   └── graph-generation.ts    # Knowledge graph from content
 │   ├── db/                        # Prisma client singleton
+│   ├── stripe/                    # Stripe billing integration
+│   ├── storage/                   # File storage abstraction
+│   ├── health/                    # Health check diagnostics
+│   ├── github/                    # GitHub API integration
+│   ├── utils/                     # Utility functions
 │   └── env.ts                     # Zod-validated environment
 ├── prisma/
-│   ├── schema.prisma              # 18 database models
+│   ├── schema.prisma              # 19 database models
 │   └── migrations/
-└── docker-compose.yml
+├── types/                         # Global TypeScript types
+├── k8s/                           # Kubernetes deployment manifests
+├── scripts/                       # Entrypoint and env validation
+├── Dockerfile                     # Multi-stage Docker build
+└── docker-compose.yml             # Local development stack
 ```
 
 ---
 
-## 🌐 API Overview
+## 🔐 Environment Variables
 
-All API routes require authentication via Auth.js session cookies unless noted.
-
-| Category | Endpoints | Purpose |
-|----------|-----------|---------|
-| **Auth** | `GET /api/auth/me` | Current user profile |
-| **Workspace** | `GET/POST /api/workspace` | Multi-tenant workspace management |
-| **Projects** | `GET/POST /api/projects` | Project CRUD with repository counts |
-| **Repositories** | `GET /api/repositories`, `POST /api/github/sync` | Import and analyze repos |
-| **Analysis** | `GET /api/analysis/progress/:id`, `/api/analysis/results/:id` | SSE progress + results |
-| **AI** | `POST /api/ai/chat` | Streaming AI architecture chat |
-| **Graph** | `GET /api/graph` | Knowledge graph nodes and edges |
-| **Diagrams** | `GET /api/diagrams` | Architecture diagram listing |
-| **Timeline** | `GET /api/timeline` | Chronological activity feed |
-| **Impact** | `GET /api/impact` | Blast radius and risk analysis |
-| **Search** | `GET /api/search` | Global search across all entities |
-| **Settings** | `GET/PUT /api/settings` | User profile settings |
-| **Team** | `POST /api/invitations` | Email-based team invitations |
-| **Billing** | `GET /api/billing` | Subscription and plan info |
-| **Health** | `GET /api/health` | Multi-service diagnostics (unauthenticated) |
+| Variable | Required | Description |
+|----------|:--------:|-------------|
+| `DATABASE_URL` | ✅ | PostgreSQL connection URL (supports pgBouncer) |
+| `AUTH_SECRET` | ✅ | Auth.js secret (min 32 chars) |
+| `AUTH_GITHUB_ID` | ✅ | GitHub OAuth Client ID |
+| `AUTH_GITHUB_SECRET` | ✅ | GitHub OAuth Client Secret |
+| `AUTH_GOOGLE_ID` | ❌ | Google OAuth Client ID |
+| `AUTH_GOOGLE_SECRET` | ❌ | Google OAuth Client Secret |
+| `OPENAI_API_KEY` | ❌ | OpenAI API key (needed for AI features) |
+| `OPENAI_MODEL` | ❌ | Model identifier (default: `gpt-4o-mini`) |
+| `NEXT_PUBLIC_APP_URL` | ✅ | Public application URL |
+| `STRIPE_SECRET_KEY` | ❌ | Stripe secret key for billing |
+| `SENTRY_DSN` | ❌ | Sentry DSN for error tracking |
+| `NEXT_PUBLIC_POSTHOG_KEY` | ❌ | PostHog analytics key |
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from the community.
-
 ```bash
-# Fork and clone
-git clone https://github.com/your-username/archon.git
-cd archon
-
-# Install dependencies
-npm install
-
-# Copy environment template
-cp .env.example .env
-
-# Set up the database
-npm run db:generate
-npm run db:migrate
-
-# Start development
-npm run dev
-```
-
-### Code Quality
-
-```bash
-npm run lint       # ESLint
-npm run typecheck  # TypeScript strict checks
-npm run build      # Production build
+npm run dev       # Development server
+npm run build     # Production build
+npm run lint      # ESLint
+npm run typecheck # TypeScript check
+npm run db:studio # Prisma Studio
 ```
 
 ### Guidelines
 
-- Follow existing code style (TypeScript strict mode, functional components)
-- Use Prisma for database changes (`npm run db:migrate`)
-- Add Zod validation for new environment variables
-- Use shadcn/ui components for UI elements
-- Keep the dashboard dark mode by default
+- TypeScript strict mode everywhere
+- shadcn/ui components for all UI
+- Dark mode by default
+- Server Components where possible
+- Zod validation for API inputs
+- One Prisma model per domain concept
 
 ---
 
@@ -396,18 +344,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-<br />
-
 <p align="center">
-  Built with ❤️ for Software Architects, CTOs, Platform Engineers, DevOps Teams, and Developers.
-</p>
-
-<p align="center">
-  <a href="https://nextjs.org">Next.js</a> ·
-  <a href="https://www.typescriptlang.org">TypeScript</a> ·
-  <a href="https://www.prisma.io">Prisma</a> ·
-  <a href="https://www.postgresql.org">PostgreSQL</a> ·
-  <a href="https://openai.com">OpenAI</a> ·
-  <a href="https://reactflow.dev">React Flow</a> ·
-  <a href="https://vercel.com">Vercel</a>
+  Built with ❤️ for Developers, DevOps Engineers, Platform Teams, and Software Architects.
 </p>
